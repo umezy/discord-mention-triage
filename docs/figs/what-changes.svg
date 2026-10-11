@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="326" viewBox="0 0 900 326" role="img" font-family="'Segoe UI','Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif">
+  <title>何が変わるか</title>
+  <desc>いまは、メンション 10 件をぜんぶ自分で開く。このあとは、仕分けた結果が専用チャンネルに届く。例として 10 件のうち、返信の下書きつきが 2 件（下書きを貼るだけ。田中、#仕様の相談「仕様書のレビュー、金曜までにお願いできますか？」に、下書き「確認します。金曜の午前中までにコメントします。」）、スタンプで十分が 3 件（スタンプを押すだけ。佐藤、#進捗共有「さっきの件、対応しておきました！」に、おすすめ 🙏、代わりに 👍 ✅）、対応不要が 5 件（開かなくてよい。鈴木、#全体連絡。共有だけで、質問や依頼は無い。対応不要だけのときは、通知も出ない）。返信の下書きつきとスタンプで十分には、元の発言を開くリンクが付く。中身は作り物。</desc>
+  <style>
+    .bg { fill: #f3f6f5; stroke: #d3ddd9; }
+    .card { fill: #ffffff; stroke: #d3ddd9; stroke-width: 1; }
+    .edge { stroke: #55645f; stroke-width: 1.5; fill: none; }
+    .head { fill: #55645f; }
+    text { fill: #15201e; font-size: 12px; }
+    text.h { font-weight: 700; font-size: 14px; }
+    text.g { font-weight: 700; font-size: 15px; }
+    text.s { fill: #55645f; font-size: 11px; }
+    text.q { fill: #55645f; }
+    text.n { fill: #55645f; }
+    text.m { font-family: Consolas, 'Cascadia Mono', monospace; font-size: 11px; }
+    text.link { fill: #0a6a5e; font-weight: 700; text-decoration: underline; }
+    .gray { fill: #e9efed; stroke: #d3ddd9; stroke-width: 1; }
+    .reply { fill: #e8e8fa; stroke: #3d39bd; stroke-width: 1; }
+    .stamp { fill: #dcefe9; stroke: #0a6a5e; stroke-width: 1; }
+    .quote { stroke: #d3ddd9; stroke-width: 3; }
+    .draft { fill: #e8e8fa; }
+    text.kr { fill: #3d39bd; font-weight: 700; }
+    text.ks { fill: #0a6a5e; font-weight: 700; }
+    text.kn { fill: #55645f; font-weight: 700; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path class="head" d="M0,0 L8,4 L0,8 z"/></marker>
+    <clipPath id="c1"><rect x="232" y="46" width="208" height="262" rx="10"/></clipPath>
+    <clipPath id="c2"><rect x="452" y="46" width="208" height="262" rx="10"/></clipPath>
+    <clipPath id="c3"><rect x="672" y="46" width="208" height="262" rx="10"/></clipPath>
+  </defs>
+
+  <rect class="bg" x="0.5" y="0.5" width="899" height="325" rx="12"/>
+
+  <text class="h" x="16" y="32">いま</text>
+  <text class="h" x="232" y="32">このあと<tspan class="s" font-size="12" font-weight="400" dx="10">専用チャンネルに、仕分けて届く（例。中身は作り物です）</tspan></text>
+
+  <!-- いま: 10 件ぜんぶ、自分で開く -->
+  <rect class="card" x="16" y="46" width="184" height="262" rx="10"/>
+  <text class="n" x="30" y="74">メンション 10 件</text>
+  <rect class="gray" x="30" y="84" width="20" height="15" rx="4"/>
+  <rect class="gray" x="55" y="84" width="20" height="15" rx="4"/>
+  <rect class="gray" x="80" y="84" width="20" height="15" rx="4"/>
+  <rect class="gray" x="105" y="84" width="20" height="15" rx="4"/>
+  <rect class="gray" x="130" y="84" width="20" height="15" rx="4"/>
+  <rect class="gray" x="30" y="104" width="20" height="15" rx="4"/>
+  <rect class="gray" x="55" y="104" width="20" height="15" rx="4"/>
+  <rect class="gray" x="80" y="104" width="20" height="15" rx="4"/>
+  <rect class="gray" x="105" y="104" width="20" height="15" rx="4"/>
+  <rect class="gray" x="130" y="104" width="20" height="15" rx="4"/>
+  <text class="g" x="30" y="150">10 件ぜんぶ、</text>
+  <text class="g" x="30" y="170">自分で開く</text>
+  <text class="s" x="30" y="196">通知のたびに手が止まり、</text>
+  <text class="s" x="30" y="212">開いて、読んで、判断する</text>
+
+  <line class="edge" x1="204" y1="177" x2="226" y2="177" marker-end="url(#a)"/>
+
+  <!-- 返信の下書きつき -->
+  <rect class="card" x="232" y="46" width="208" height="262" rx="10"/>
+  <rect x="232" y="46" width="208" height="5" fill="#3d39bd" clip-path="url(#c1)"/>
+  <text class="kr" x="246" y="74">返信の下書きつき</text>
+  <text class="n" x="426" y="74" text-anchor="end">2 件</text>
+  <rect class="reply" x="246" y="84" width="20" height="15" rx="4"/>
+  <rect class="reply" x="271" y="84" width="20" height="15" rx="4"/>
+  <text class="g" x="246" y="130">下書きを、貼るだけ</text>
+  <text class="s" x="246" y="152">田中 · #仕様の相談</text>
+  <line class="quote" x1="247.5" y1="163" x2="247.5" y2="200"/>
+  <text class="q" x="256" y="177">仕様書のレビュー、金曜まで</text>
+  <text class="q" x="256" y="194">にお願いできますか？</text>
+  <rect class="draft" x="246" y="210" width="180" height="48" rx="8"/>
+  <text class="m" x="256" y="230">確認します。金曜の午前中</text>
+  <text class="m" x="256" y="247">までにコメントします。</text>
+  <text class="link" x="246" y="290">元の発言を開く ↗</text>
+
+  <!-- スタンプで十分 -->
+  <rect class="card" x="452" y="46" width="208" height="262" rx="10"/>
+  <rect x="452" y="46" width="208" height="5" fill="#0a6a5e" clip-path="url(#c2)"/>
+  <text class="ks" x="466" y="74">スタンプで十分</text>
+  <text class="n" x="646" y="74" text-anchor="end">3 件</text>
+  <rect class="stamp" x="466" y="84" width="20" height="15" rx="4"/>
+  <rect class="stamp" x="491" y="84" width="20" height="15" rx="4"/>
+  <rect class="stamp" x="516" y="84" width="20" height="15" rx="4"/>
+  <text class="g" x="466" y="130">スタンプを、押すだけ</text>
+  <text class="s" x="466" y="152">佐藤 · #進捗共有</text>
+  <line class="quote" x1="467.5" y1="163" x2="467.5" y2="200"/>
+  <text class="q" x="476" y="177">さっきの件、対応して</text>
+  <text class="q" x="476" y="194">おきました！</text>
+  <text x="466" y="232" font-size="13">おすすめ 🙏</text>
+  <text class="n" x="466" y="252">代わりに 👍 ✅</text>
+  <text class="link" x="466" y="290">元の発言を開く ↗</text>
+
+  <!-- 対応不要 -->
+  <rect class="card" x="672" y="46" width="208" height="262" rx="10"/>
+  <rect x="672" y="46" width="208" height="5" fill="#55645f" clip-path="url(#c3)"/>
+  <text class="kn" x="686" y="74">対応不要</text>
+  <text class="n" x="866" y="74" text-anchor="end">5 件</text>
+  <rect class="gray" x="686" y="84" width="20" height="15" rx="4"/>
+  <rect class="gray" x="711" y="84" width="20" height="15" rx="4"/>
+  <rect class="gray" x="736" y="84" width="20" height="15" rx="4"/>
+  <rect class="gray" x="761" y="84" width="20" height="15" rx="4"/>
+  <rect class="gray" x="786" y="84" width="20" height="15" rx="4"/>
+  <text class="g" x="686" y="130">開かなくてよい</text>
+  <text class="s" x="686" y="152">鈴木 · #全体連絡</text>
+  <text x="686" y="177">共有だけ。あなたへの質問や</text>
+  <text x="686" y="194">依頼は、ありません。</text>
+  <text class="s" x="686" y="230">対応不要だけのときは、</text>
+  <text class="s" x="686" y="246">通知も出ません。</text>
+</svg>
