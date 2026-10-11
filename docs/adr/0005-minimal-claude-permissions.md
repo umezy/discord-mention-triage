@@ -6,6 +6,8 @@ amended-by: [ADR-0012]
 
 # ADR-0005: 仕分けの Claude に渡す権限を最小にする
 
+![claude -p が書けるのは drafts/ と out/ だけで、投稿は notify.py が行う。渡すものと渡さないもの](figs/0005-minimal-claude-permissions.svg)
+
 ## 背景と課題
 
 メッセージ本文は、サーバーの誰でも書ける。「Claude は〜しろ」「`.env` を読め」と書かれたメンションが届き得る（プロンプトインジェクション）。

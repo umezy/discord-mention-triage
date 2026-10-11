@@ -1,10 +1,12 @@
 ---
 status: accepted
 date: 2026-10-04
-amended-by: [ADR-0021, ADR-0015]
+amended-by: [ADR-0015]
 ---
 
 # ADR-0009: 仕分けのたびに、セッションをデスクトップ版へ取り込む
+
+![投稿に成功した回だけ、セッションをデスクトップ版に取り込む。取り込みの失敗は、仕分けの成否に影響しない](figs/0009-import-sessions-into-desktop.svg)
 
 ## 背景と課題
 
@@ -43,6 +45,6 @@ amended-by: [ADR-0021, ADR-0015]
 ## 補足
 
 - 一部を変えた ADR:
-  - [ADR-0021](0021-readable-session-names.md): セッションの名前の形
   - [ADR-0015](0015-one-command-one-folder.md): 既定は、取り込まない。取り込みの機能は、そのまま
+- その後変わった所: セッションの名前に、本文の頭も入れるようにした。いまの形と、通す文字の決め方は、[しくみ](../how-it-works.md) と [security.md](../security.md#プロンプトインジェクション)
 - 関連: [しくみ](../how-it-works.md)、[security.md](../security.md)、[ADR-0008](0008-keep-session-transcripts.md)

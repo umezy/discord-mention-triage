@@ -135,7 +135,7 @@ def parse(data: dict, path: Path | None = None) -> Config:
         except (KeyError, TypeError, ValueError):
             raise ConfigError(f"watchers[{name}].user_id が数値でない") from None
         if w.get("pr_auto_review"):
-            # 有効にする実装は無い（ADR-0004、ADR-0013）。true を黙って読み飛ばすと「有効にしたつもり」になるので、止める。
+            # 有効にする実装は無い（ADR-0004）。true を黙って読み飛ばすと「有効にしたつもり」になるので、止める。
             raise ConfigError(f"watchers[{name}].pr_auto_review は true にできない（PR の自動レビューは無効。ADR-0004）")
         p = w.get("pr_policy") or {}
         policy = PrPolicy(
@@ -153,7 +153,7 @@ def parse(data: dict, path: Path | None = None) -> Config:
                 channel_blocklist=_ids(w.get("channel_blocklist"), "channel_blocklist"),
                 context_before=int(w.get("context_before", 15)),
                 context_after=int(w.get("context_after", 10)),
-                # settle_seconds（投稿から待つ秒数）は、外した（ADR-0022）。古い設定ファイルに残っていても、読み飛ばす
+                # settle_seconds（投稿から待つ秒数）は、外した（検索に出るまでの約 100 秒が、様子見を兼ねる）。古い設定ファイルに残っていても、読み飛ばす
                 include_everyone=bool(w.get("include_everyone", False)),
                 pr_policy=policy,
                 read_dirs=tuple(str(d) for d in w.get("read_dirs", [])),

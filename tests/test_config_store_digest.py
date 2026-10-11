@@ -65,7 +65,7 @@ class Config(unittest.TestCase):
         self.assertFalse(w.pr_policy.requester_role_ids)
 
     def test_pr_auto_review_cannot_be_switched_on(self):
-        # 有効にする実装は無い（ADR-0004、ADR-0013）。true を黙って読み飛ばさない
+        # 有効にする実装は無い（ADR-0004）。true を黙って読み飛ばさない
         def with_flag(value):
             return {"watchers": [dict(VALID["watchers"][0], pr_auto_review=value)]}
 

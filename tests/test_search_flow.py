@@ -73,7 +73,7 @@ class BasicFlow(Base):
         mid = self.fake.mention(30, "これ確認お願いします", attachments=["spec.png"])
         self.fake.add(sf(10), "補足です", author=ALICE)
 
-        res = self.poll()  # 投稿から 30 秒でも、見つけた回に出す（待つ時間は置かない。ADR-0022）
+        res = self.poll()  # 投稿から 30 秒でも、見つけた回に出す（待つ時間は置かない）
         self.assertEqual((res.ok, res.found, res.emitted), (True, 1, 1))
         self.assertTrue(self.home.is_known(mid))
         (item,) = self.inbox_items()

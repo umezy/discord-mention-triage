@@ -68,7 +68,7 @@ def rule_path(path) -> str:
 def build_command(claude: str, cfg, watcher, home, session_name: str = "") -> list:
     """claude -p の引数。長い日本語の指示は引数に載せず、標準入力で渡す（Windows の引数は日本語が壊れる）。
 
-    session_name は、記録を残すときだけ付ける。デスクトップ版の左側で、誰の、何の件かが分かるようにする（session_naming.py、ADR-0021）。
+    session_name は、記録を残すときだけ付ける。デスクトップ版の左側で、誰の、何の件かが分かるようにする（session_naming.py）。
     誰でも書ける文字列が入るので、決めた文字だけの名前でなければ、付けない（claude.cmd のときは、引数が cmd.exe を通る）。
     名前は、引数でしか渡せない。短い日本語は、この経路（Python → claude.cmd → claude.exe）では壊れなかった（2026-10-10 の実測）。"""
     cmd = [
@@ -335,7 +335,7 @@ def parse_result(stdout: str) -> dict:
 
 
 def needs_mention(counts, body: str) -> bool:
-    """配達に、本人へのメンション（通知）を付けるか。対応不要だけの配達には、付けない（ADR-0024）。
+    """配達に、本人へのメンション（通知）を付けるか。対応不要だけの配達には、付けない（手を止めなくてよい回で、通知を出さない）。
 
     迷ったら付ける。件数が分からないとき、返信ドラフト・スタンプ・PR が 1 件でもあるとき、本文に見てもらう印があるときは、付ける。
     """
