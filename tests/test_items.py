@@ -5,7 +5,7 @@ from watcher import items
 
 T = datetime(2026, 10, 3, 3, 0, tzinfo=timezone.utc)  # JST 12:00
 
-# 旧 poll.py の pending-*.json が持っていたキー。互換を保つ（仕分けの指示文がこの形を読む）。
+# これまでの pending-*.json が持っていたキー。互換を保つ（仕分けの指示文がこの形を読む）。
 LEGACY_KEYS = {
     "message_id", "channel_id", "channel_name", "guild_id", "jump_url", "direct",
     "pull_requests", "mention", "context_before", "context_after",

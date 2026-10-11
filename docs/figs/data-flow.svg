@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="300" viewBox="0 0 900 300" role="img" font-family="'Segoe UI','Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif">
+  <title>データがどこを通るか</title>
+  <desc>Discord のサーバーから、GET だけで、あなたの PC の ~/.discord-mention-triage/ に読み込む。本文と下書きはここに残り、鍵は .env にあって Claude は読めない。ログと runs には件数と理由だけを書く。そこから claude -p で Claude（Anthropic）へ送り、鍵 3 のアカウントの契約の範囲で扱われる。個人の契約なら、学習の設定を OFF にする。結果は Webhook で自分専用チャンネルに届き、元の発言の引用を含む。keep_transcripts が true のときは、Claude のセッション記録（本文を含む）が ~/.claude/projects/ に残り、30 日で自動で消える。リポジトリには、鍵も本文も置かない。</desc>
+  <style>
+    .bg { fill: #ffffff; stroke: #d3ddd9; }
+    .box { fill: #ffffff; stroke: #15201e; stroke-width: 1.2; }
+    .zone { fill: #f3f6f5; stroke: #55645f; stroke-width: 1; stroke-dasharray: 5 4; }
+    .file { fill: #e9efed; stroke: #55645f; stroke-width: 1; }
+    .opt { fill: #ffffff; stroke: #55645f; stroke-width: 1; stroke-dasharray: 4 3; }
+    .edge { stroke: #15201e; stroke-width: 1.3; fill: none; }
+    .hot { stroke: #0a6a5e; stroke-width: 2; fill: none; }
+    .head { fill: #15201e; }
+    .hothead { fill: #0a6a5e; }
+    text { fill: #15201e; font-size: 12px; }
+    text.t { font-weight: 700; font-size: 13px; }
+    text.m { font-family: Consolas, 'Cascadia Mono', monospace; font-size: 11px; }
+    text.mb { font-family: Consolas, 'Cascadia Mono', monospace; font-size: 12px; font-weight: 700; }
+    text.s { fill: #55645f; font-size: 11px; }
+    text.hl { fill: #0a6a5e; font-weight: 700; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path class="head" d="M0,0 L8,4 L0,8 z"/></marker>
+    <marker id="b" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path class="hothead" d="M0,0 L8,4 L0,8 z"/></marker>
+  </defs>
+
+  <rect class="bg" x="0.5" y="0.5" width="899" height="299" rx="12"/>
+
+  <!-- Discord -->
+  <rect class="box" x="16" y="76" width="170" height="64" rx="8"/>
+  <text class="t" x="101" y="103" text-anchor="middle">Discord のサーバー</text>
+  <text class="s" x="101" y="123" text-anchor="middle">ボットに見える範囲</text>
+
+  <!-- あなたの PC -->
+  <rect class="zone" x="226" y="16" width="420" height="268" rx="12"/>
+  <text class="s" x="242" y="34">あなたの PC</text>
+
+  <rect class="file" x="250" y="40" width="372" height="124" rx="8"/>
+  <text class="mb" x="266" y="62">~/.discord-mention-triage/</text>
+  <text class="m" x="266" y="84">inbox/  claims/  processed/  drafts/  out/</text>
+  <text class="s" x="266" y="106">本文と下書きは、ここに残る（消す仕組みは、まだ無い）</text>
+  <text class="s" x="266" y="126">鍵は .env にある。Claude は読めない</text>
+  <text class="s" x="266" y="146">ログと runs/ には、件数と理由だけ</text>
+
+  <rect class="opt" x="250" y="180" width="372" height="64" rx="8"/>
+  <text class="mb" x="266" y="202">~/.claude/projects/</text>
+  <text class="s" x="266" y="220">Claude のセッション記録（本文を含む）</text>
+  <text class="s" x="266" y="236">keep_transcripts: true のとき。30 日で自動で消える</text>
+
+  <text class="s" x="436" y="270" text-anchor="middle">リポジトリには、鍵も本文も置かない</text>
+
+  <!-- PC の外（送り先） -->
+  <rect class="box" x="690" y="40" width="194" height="64" rx="8"/>
+  <text class="t" x="787" y="62" text-anchor="middle">Claude（Anthropic）</text>
+  <text class="s" x="787" y="80" text-anchor="middle">鍵 ③ のアカウントの契約</text>
+  <text class="s" x="787" y="96" text-anchor="middle">個人の契約なら、学習を OFF に</text>
+
+  <rect class="box" x="690" y="118" width="194" height="64" rx="8"/>
+  <text class="t" x="787" y="140" text-anchor="middle">自分専用チャンネル</text>
+  <text class="s" x="787" y="158" text-anchor="middle">元の発言の引用を含む</text>
+  <text class="s" x="787" y="174" text-anchor="middle">ほかの人に見えない所に作る</text>
+
+  <!-- 線 -->
+  <line class="hot" x1="186" y1="108" x2="246" y2="108" marker-end="url(#b)"/>
+  <text class="hl" x="216" y="99" text-anchor="middle">GET だけ</text>
+  <line class="edge" x1="622" y1="72" x2="686" y2="72" marker-end="url(#a)"/>
+  <text class="m" x="654" y="64" text-anchor="middle">claude -p</text>
+  <line class="hot" x1="622" y1="150" x2="686" y2="150" marker-end="url(#b)"/>
+  <text class="hl" x="654" y="142" text-anchor="middle">Webhook</text>
+</svg>

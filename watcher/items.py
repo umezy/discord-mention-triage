@@ -1,4 +1,4 @@
-"""inbox に書く 1 件ぶん（item）の組み立て。形は旧 poll.py の pending-*.json と互換。
+"""inbox に書く 1 件ぶん（item）の組み立て。形は、これまでの pending-*.json と互換。
 
 通信しない。search.py が、REST で取ったメッセージを Snap に詰め替えてから渡す。
 """

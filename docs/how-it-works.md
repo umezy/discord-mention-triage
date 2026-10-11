@@ -3,32 +3,7 @@
 タスクスケジューラが 2 分おきに `pipeline/dispatch.py` を起動し、1 回の起動で、受付・開封・仕分けが順に動く。常駐するプロセスは無い。
 この形にした理由は [ADR-0014](adr/0014-poll-search-api-single-entry.md)。
 
-```mermaid
-flowchart TB
-  subgraph Discord
-    S["検索 API<br/>（メンション先で絞って引く）"]
-    R["REST<br/>（メッセージ・リアクション・前後の会話）"]
-  end
-  subgraph PC["自分の PC"]
-    TS["Windows タスクスケジューラ<br/>2分おき・登録は1つ"] --> DP
-    subgraph DP["dispatch.py（1 回の起動で、上から順に）"]
-      direction TB
-      P["① 受付 search.py<br/>検索を引く → 宛先判定 → スタンプ・返信済みを確認"]
-      T["② 開封 tick.py<br/>落ちた回の掃除 → claim"]
-      RC["③ 仕分け run_claude.py<br/>新着があるときだけ"]
-      P --> T --> RC
-    end
-    P -- "GET だけ" --> S
-    P -- "GET だけ" --> R
-    P --> IN[("inbox/pending-*.json")]
-    T --> IN
-    T --> CL[("claims/")]
-    RC --> CC["claude -p<br/>（権限を絞った無人実行）"]
-    CC --> OUT[("drafts/ と out/ に<br/>2ファイルを書く")]
-    RC -- "確認して Webhook 投稿" --> DG["本人専用チャンネル"]
-    RC -- "成功したら" --> PR[("processed/")]
-  end
-```
+![タスクスケジューラが dispatch.py を 2 分おきに起動し、受付、開封、仕分けが順に動く。受付は Discord へ GET だけを出し、inbox に書き出す。開封は claims へ移し、仕分けは claude -p に指示して、out/ を確かめてから専用チャンネルへ Webhook で投稿し、processed へ移す](figs/one-run.svg)
 
 ## 1 回の起動で動くこと
 
@@ -47,7 +22,7 @@ flowchart TB
 | `watcher/detect.py` | 宛先判定（直接 / ロール / everyone）。純粋関数 | Discord への依存 |
 | `watcher/pr_policy.py` | PR の URL を、条件を満たした依頼と、満たさなかった依頼に分ける。**未設定なら何も満たさない** | |
 | `watcher/store.py` | ホームディレクトリ上の状態。受付とパイプラインが共有 | |
-| `triage.py` | 人が打つ、ただ 1 つのコマンド。`init`（設定と鍵の置き場を作る）、`check`、`run`、`install`、`status` | 鍵の表示（どのコマンドも、鍵を画面に出さない） |
+| `triage.py` | 人が打つ、ただ 1 つのコマンド。`init`（設定と鍵の置き場を作る）、`check`、`run`、`install`、`uninstall`、`status` | 鍵の表示（どのコマンドも、鍵を画面に出さない） |
 | `pipeline/dispatch.py` | 自動起動が呼ぶ、ただ 1 つの入口。受付 → 掃除と claim → 通知 → 新着があれば仕分け。同時に動くのは 1 つ（OS のファイルロック） | AI |
 | `pipeline/tick.py` | 途中で落ちた回の掃除、claim、3 回失敗した件の退避 | AI、Discord への通信 |
 | `pipeline/run_claude.py` | `claude -p` の起動、出力の検証、投稿、claim の後始末、失敗時の再試行 | Webhook を Claude に渡すこと |
@@ -134,7 +109,7 @@ claude -p "Follow the task written on stdin." --model opus --effort xhigh
 - **入口は 1 つ、同時に動くのも 1 つ**: 受付・開封・仕分けを、同じプロセスで順に行う。ロックは、OS のファイルロック 1 つ。
   持ち主が落ちれば OS が外すので、「古いロックを何秒で捨てるか」を決めなくてよい。
 - **対応不要だけの配達には、メンションを付けない**: 手を止めなくてよい回で、通知を出さない。迷ったら付ける（件数が読めない、見てもらう印がある）。
-- **書き出す直前に、スタンプ済み・返信済みを確かめる**: 本人がスタンプを付けた・返信した分は下書きもダイジェストも不要。
+- **書き出す直前に、スタンプ済み・返信済みを確かめる**: 本人がスタンプを付けた・返信した分は、下書きも結果の投稿も要らない。
   投稿から待つ時間（`settle_seconds`）は、置かない。検索に出るまでに約 100 秒かかり、それが様子見を兼ねる。
   出す直前に REST で「本人のリアクションがあるか」「その後に本人の発言があるか」を確認して捨てる。
 - **1 件 1 ファイル**: 将来 PR レビュー（最大 1 時間）を無人化しても、同時に来た返信ドラフトを待たせないため。
@@ -181,6 +156,7 @@ claude -p "Follow the task written on stdin." --model opus --effort xhigh
 | `<名前>/claims/` | 仕分け中のメンション |
 | `<名前>/processed/` | 仕分けが済んだメンション |
 | `<名前>/drafts/` | 返信の下書きの控え |
+| `<名前>/out/` | 専用チャンネルへの投稿本文（Claude が書き、確かめてから投稿する） |
 | `<名前>/failed/` | 3 回失敗して、よけたメンション |
 | `<名前>/runs/` | 仕分けの記録（件数、かかった時間など。本文は入らない） |
 | `<名前>/state.json`、`poll.json` | 拾い済みの控えと、どこまで読んだか |
@@ -188,17 +164,16 @@ claude -p "Follow the task written on stdin." --model opus --effort xhigh
 
 ### リポジトリ
 
-```
-.
-├─ triage.py     人が打つ、ただ 1 つのコマンド（init / check / run / install / status / uninstall）
-├─ watcher/      受付（Discord の検索を引く。読むだけ）
-├─ pipeline/     開封、仕分け（claude -p の呼び出し）、配達
-├─ scripts/      自動起動の登録（triage.py install が呼ぶ）
-├─ config/       設定の見本（config.example.json）
-├─ tests/        自動のテスト（偽の Discord と、偽の Claude を使う）
-├─ docs/         README の先の説明と、決定の記録（adr/）
-└─ .claude/      セットアップのスキル（skills/triage-setup）
-```
+| 場所 | 中身 |
+|---|---|
+| `triage.py` | 人が打つ、ただ 1 つのコマンド（init / check / run / install / status / uninstall） |
+| `watcher/` | 受付（Discord の検索を引く。読むだけ） |
+| `pipeline/` | 開封、仕分け（claude -p の呼び出し）、配達 |
+| `scripts/` | 自動起動の登録（`triage.py install` が呼ぶ） |
+| `config/` | 設定の見本（`config.example.json`） |
+| `tests/` | 自動のテスト（偽の Discord と、偽の Claude を使う） |
+| `docs/` | README の先の説明と、決定の記録（`adr/`） |
+| `.claude/` | セットアップのスキル（`skills/triage-setup`） |
 
 ## ほかの人が使うとき
 

@@ -132,7 +132,7 @@ class Safety(unittest.TestCase):
             self.assertTrue((root / "injected.txt").exists())
             (root / "injected.txt").unlink()
 
-            for items in ([self.HOSTILE, self.HOSTILE], [item("これ確認お願いします！", author="たなか", channel="QA報告_落下バグ")],
+            for items in ([self.HOSTILE, self.HOSTILE], [item("これ確認お願いします！", author="たなか", channel="仕様の相談_来週の予定")],
                           [item("--bare", author="--dangerously-skip-permissions", channel="x")]):
                 name = session_naming.build(items)
                 self.assertEqual(through_the_shim(name), ["--name", name])
