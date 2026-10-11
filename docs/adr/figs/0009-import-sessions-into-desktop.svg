@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="300" viewBox="0 0 680 300" role="img" font-family="'Segoe UI','Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif">
+  <title>仕分けのたびに、セッションをデスクトップ版へ取り込む</title>
+  <desc>仕分けて投稿したあと、成功した回だけ claude --desktop --resume で取り込み、デスクトップ版の左側の一覧にメンションごとに 1 件並べる。取り込みに失敗しても、実行記録に残すだけで、仕分けは成功のまま。Windows では見えない本物のコンソールを作って、その中で呼ぶ。Remote Control は自動では ON にしない。</desc>
+  <defs><marker id="a-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-coral" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#D85A30" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <rect width="680" height="300" fill="#FFFFFF"/>
+  <rect x="20" y="40" width="120" height="60" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="80.0" y="61.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">仕分け</text>
+  <text x="80.0" y="82.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">claude -p</text>
+  <rect x="190" y="40" width="120" height="60" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="250.0" y="61.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">投稿</text>
+  <text x="250.0" y="82.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">専用チャンネル</text>
+  <rect x="430" y="40" width="230" height="60" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="545.0" y="61.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">取り込む</text>
+  <text x="545.0" y="82.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">claude --desktop --resume &lt;ID&gt;</text>
+  <path d="M140 70 L188 70" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <path d="M310 70 L428 70" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <text x="369.0" y="60.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">成功した回だけ</text>
+  <rect x="430" y="150" width="230" height="60" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="545.0" y="171.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">デスクトップ版の左側に並ぶ</text>
+  <text x="545.0" y="192.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">メンションごとに 1 件</text>
+  <path d="M545 100 L545 148" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <text x="553" y="124" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="start" dominant-baseline="central">取り込めたら</text>
+  <rect x="170" y="150" width="220" height="60" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="280.0" y="171.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">実行記録に残すだけ</text>
+  <text x="280.0" y="192.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">失敗しても、仕分けは成功のまま</text>
+  <path d="M470 100 L470 124 L280 124 L280 148" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a-gray)"/>
+  <text x="375" y="112" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">失敗したら</text>
+  <text x="20" y="246" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="start" dominant-baseline="central">・Windows では、見えない本物のコンソールを作って、その中で呼ぶ（画面に向いていないと動かないため）</text>
+  <text x="20" y="270" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="start" dominant-baseline="central">・Remote Control は、自動では ON にしない（使いたい回だけ、デスクトップ版で ON にする）</text>
+</svg>

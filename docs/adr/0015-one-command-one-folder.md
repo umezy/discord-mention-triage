@@ -1,10 +1,11 @@
 ---
 status: accepted
 date: 2026-10-10
-amended-by: [ADR-0028]
 ---
 
 # ADR-0015: 入口のコマンドを 1 つ、設定と鍵の置き場を 1 つにする。配るときは、フォルダをそのまま渡す
+
+![入口 6 つと設定 3 か所を、python triage.py の 1 つと ~/.discord-mention-triage/ の 1 つにまとめる](figs/0015-one-command-one-folder.svg)
 
 ## 背景と課題
 
@@ -57,6 +58,5 @@ amended-by: [ADR-0028]
 
 ## 補足
 
-- 一部を変えた ADR:
-  - [ADR-0028](0028-distribute-with-git-clone.md): 配り方。zip ではなく `git clone`
+- その後変わった所: 配り方。zip ではなく、公開リポジトリを `git clone` してもらう（[README](../../README.md#セットアップ)）
 - 関連: [ADR-0014](0014-poll-search-api-single-entry.md)、[setup.md](../setup.md)

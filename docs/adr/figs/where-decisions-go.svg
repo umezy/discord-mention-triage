@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="300" viewBox="0 0 680 300" role="img" font-family="'Segoe UI','Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif">
+  <title>決定の残し方</title>
+  <desc>決めたことが、システムの作り（部品の分け方、データの流れ、外とのつなぎ方、権限と鍵、約束）を変えるなら ADR に書く。そうでなければ、理由はそのコミットか PR の説明に、いまの決まりは CLAUDE.md か docs のページに書く。まだ決めていないことは未決事項に書き、決まったら同じ分け方で書く。</desc>
+  <defs><marker id="a-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-coral" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#D85A30" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <rect width="680" height="300" fill="#FFFFFF"/>
+  <rect x="20" y="110" width="120" height="60" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="80.0" y="140.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">決めたこと</text>
+  <rect x="14" y="222" width="132" height="56" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="5 4"/>
+  <text x="80.0" y="241.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">未決事項</text>
+  <text x="80.0" y="262.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">open-questions.md</text>
+  <path d="M80 222 L80 172" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a-gray)"/>
+  <text x="90" y="197" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="start" dominant-baseline="central">決まったら</text>
+  <rect x="180" y="104" width="230" height="72" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+  <text x="295.0" y="123.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">システムの作りを変える？</text>
+  <text x="295.0" y="143.5" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">部品の分け方・データの流れ</text>
+  <text x="295.0" y="160.5" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">外とのつなぎ方・権限と鍵・約束</text>
+  <path d="M140 140 L178 140" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <rect x="470" y="26" width="190" height="60" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="565.0" y="47.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">ADR（docs/adr/）</text>
+  <text x="565.0" y="68.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">なぜそう決めたか・捨てた案</text>
+  <rect x="470" y="128" width="190" height="60" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="565.0" y="149.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">コミットか PR の説明</text>
+  <text x="565.0" y="170.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">その変更の理由</text>
+  <rect x="470" y="206" width="190" height="60" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="565.0" y="227.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">CLAUDE.md・docs</text>
+  <text x="565.0" y="248.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">いまの決まり（書き方・運用）</text>
+  <path d="M410 122 L440 122 L440 56 L468 56" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <text x="454" y="44" font-size="12" font-weight="500" fill="#0F6E56" text-anchor="middle" dominant-baseline="central">はい</text>
+  <path d="M410 158 L468 158" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <path d="M440 158 L440 236 L468 236" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <text x="440" y="146" font-size="12" font-weight="500" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">いいえ</text>
+</svg>

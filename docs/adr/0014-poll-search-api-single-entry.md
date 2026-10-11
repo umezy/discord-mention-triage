@@ -1,10 +1,11 @@
 ---
 status: accepted
 date: 2026-10-09
-amended-by: [ADR-0022]
 ---
 
 # ADR-0014: 取得は検索 API を数分おきに引く形にし、常駐をやめて、入口を 1 つにする
+
+![常駐の受付と、別のプロセスの開封を、2 分おきに起動する dispatch.py の 1 つにまとめる](figs/0014-poll-search-api-single-entry.svg)
 
 ## 背景と課題
 
@@ -100,7 +101,6 @@ amended-by: [ADR-0022]
 
 ## 補足
 
-- 一部を変えた ADR:
-  - [ADR-0022](0022-no-settle-wait.md): 投稿から 60 秒待つのを、やめた
+- その後変わった所: 投稿から 60 秒待つのを、やめた（検索に出るまでの約 100 秒が、様子見を兼ねる。[しくみ「なぜこの形か」](../how-it-works.md#なぜこの形か)）
 - 関連: [ADR-0003](0003-scheduler-outside-claude.md)（一部を置き換える）、[しくみ](../how-it-works.md)
 - 実サーバーでの検証は、2026-10-10 に行った（「検証」）。

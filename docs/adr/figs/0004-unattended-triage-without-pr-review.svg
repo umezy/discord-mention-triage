@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="340" viewBox="0 0 680 340" role="img" font-family="'Segoe UI','Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif">
+  <title>仕分けは無人化し、PR の自動レビューは無効にする</title>
+  <desc>ふつうのメンションは、無人で返信ドラフト・スタンプで十分・対応不要に仕分ける。PR のレビュー依頼は「PRレビュー依頼」と表示するだけで、レビューは人が始める。将来有効にするときも、本文を読む前に機械的に判定し、許可した組織の PR、依頼者が許可ロールを持つ、ボットでない、のすべてを満たさなければ何も許可しない。</desc>
+  <defs><marker id="a-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-coral" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#D85A30" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <rect width="680" height="340" fill="#FFFFFF"/>
+  <rect x="20" y="30" width="150" height="60" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="95.0" y="60.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">ふつうのメンション</text>
+  <rect x="220" y="30" width="150" height="60" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="295.0" y="51.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">仕分け</text>
+  <text x="295.0" y="72.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">無人で動く</text>
+  <rect x="420" y="30" width="240" height="60" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="540.0" y="51.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">3 つに分ける</text>
+  <text x="540.0" y="72.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">返信ドラフト・スタンプで十分・対応不要</text>
+  <path d="M170 60 L218 60" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <path d="M370 60 L418 60" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <rect x="20" y="116" width="150" height="60" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="95.0" y="146.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">PR のレビュー依頼</text>
+  <rect x="220" y="116" width="150" height="60" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="295.0" y="137.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">表示するだけ</text>
+  <text x="295.0" y="158.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">「PRレビュー依頼」</text>
+  <rect x="420" y="116" width="240" height="60" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="0.5"/>
+  <text x="540.0" y="137.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">レビューは人が始める</text>
+  <text x="540.0" y="158.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">自動では始めない</text>
+  <path d="M170 146 L218 146" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <path d="M370 146 L418 146" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <rect x="20" y="200" width="640" height="126" rx="12" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="5 4"/>
+  <text x="34" y="216" font-size="13" font-weight="500" fill="#5F5E5A" text-anchor="start" dominant-baseline="central">将来、有効にするなら（いまは無効）</text>
+  <rect x="36" y="236" width="140" height="48" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="106.0" y="260.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">許可した組織の PR</text>
+  <text x="190" y="260" font-size="12" font-weight="500" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">かつ</text>
+  <rect x="204" y="236" width="150" height="48" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="279.0" y="260.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">依頼者が許可ロール</text>
+  <text x="368" y="260" font-size="12" font-weight="500" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">かつ</text>
+  <rect x="382" y="236" width="104" height="48" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="434.0" y="260.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">ボットでない</text>
+  <rect x="516" y="236" width="134" height="48" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="583.0" y="260.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">レビューしてよい</text>
+  <path d="M486 260 L514 260" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <text x="340" y="304" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">本文を読む前に、機械的に決める（watcher/pr_policy.py）。1 つでも欠けたら、何も許可しない</text>
+</svg>

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="330" viewBox="0 0 680 330" role="img" font-family="'Segoe UI','Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif">
+  <title>仕分けの Claude に渡す権限を最小にする</title>
+  <desc>誰でも書けるメンションの本文を、claude -p が読んで仕分ける。書けるのは drafts/ と out/ だけで、投稿は notify.py が確かめてから Webhook で行う。渡すもの: 道具は Read・Grep・Glob・Edit・Write、読めるのは claims/ と read_dirs、許可の無い操作は聞かずに拒否。渡さないもの: Bash・ネットワーク・MCP・スキル、.env、Webhook の URL、ボットのトークンと API キー。</desc>
+  <defs><marker id="a-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-coral" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#D85A30" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <rect width="680" height="330" fill="#FFFFFF"/>
+  <rect x="20" y="26" width="130" height="76" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+  <text x="85.0" y="47.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">メンションの本文</text>
+  <text x="85.0" y="67.5" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">誰でも書ける</text>
+  <text x="85.0" y="84.5" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">命令として扱わない</text>
+  <rect x="190" y="26" width="130" height="76" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="255.0" y="47.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">claude -p</text>
+  <text x="255.0" y="67.5" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">仕分け</text>
+  <text x="255.0" y="84.5" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">無人で動く</text>
+  <rect x="360" y="26" width="130" height="76" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="425.0" y="55.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">drafts/・out/</text>
+  <text x="425.0" y="76.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">書けるのはここだけ</text>
+  <rect x="530" y="26" width="130" height="76" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="595.0" y="47.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">notify.py</text>
+  <text x="595.0" y="67.5" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">確かめてから投稿</text>
+  <text x="595.0" y="84.5" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">Webhook はここだけ</text>
+  <path d="M150 64 L188 64" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <text x="169.0" y="54.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">読む</text>
+  <path d="M320 64 L358 64" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <text x="339.0" y="54.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">書く</text>
+  <path d="M490 64 L528 64" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <text x="509.0" y="54.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">読む</text>
+  <rect x="20" y="124" width="310" height="192" rx="12" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="34" y="140" font-size="13" font-weight="500" fill="#0F6E56" text-anchor="start" dominant-baseline="central">渡すもの</text>
+  <rect x="350" y="124" width="310" height="192" rx="12" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+  <text x="364" y="140" font-size="13" font-weight="500" fill="#993C1D" text-anchor="start" dominant-baseline="central">渡さないもの</text>
+  <circle cx="44" cy="166" r="9" fill="#1D9E75"/><path d="M40 166 L43 169 L48 163" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="62" y="166" font-size="13" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">道具: Read・Grep・Glob・Edit・Write</text>
+  <circle cx="44" cy="202" r="9" fill="#1D9E75"/><path d="M40 202 L43 205 L48 199" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="62" y="202" font-size="13" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">読める: claims/ と read_dirs</text>
+  <circle cx="44" cy="238" r="9" fill="#1D9E75"/><path d="M40 238 L43 241 L48 235" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="62" y="238" font-size="13" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">書ける: drafts/ と out/ の下だけ</text>
+  <circle cx="44" cy="274" r="9" fill="#1D9E75"/><path d="M40 274 L43 277 L48 271" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="62" y="274" font-size="13" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">許可の無い操作は、聞かずに拒否</text>
+  <circle cx="374" cy="166" r="9" fill="#D85A30"/><path d="M370.5 162.5 L377.5 169.5 M377.5 162.5 L370.5 169.5" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+  <text x="392" y="166" font-size="13" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">Bash・ネットワーク・MCP・スキル</text>
+  <circle cx="374" cy="202" r="9" fill="#D85A30"/><path d="M370.5 198.5 L377.5 205.5 M377.5 198.5 L370.5 205.5" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+  <text x="392" y="202" font-size="13" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">.env（鍵のファイル）</text>
+  <circle cx="374" cy="238" r="9" fill="#D85A30"/><path d="M370.5 234.5 L377.5 241.5 M377.5 234.5 L370.5 241.5" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+  <text x="392" y="238" font-size="13" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">Webhook の URL</text>
+  <circle cx="374" cy="274" r="9" fill="#D85A30"/><path d="M370.5 270.5 L377.5 277.5 M377.5 270.5 L370.5 277.5" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+  <text x="392" y="274" font-size="13" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">ボットのトークン・API キー</text>
+</svg>

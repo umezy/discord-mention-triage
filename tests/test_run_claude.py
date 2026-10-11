@@ -177,7 +177,7 @@ class Triage(Base):
         self.assertEqual(len(self.posts), 1)
         self.assertTrue((self.home.processed / "pending-a.json").exists())
 
-    # --- 通知（メンション）を付けるかどうか（ADR-0024） ---
+    # --- 通知（メンション）を付けるかどうか ---
     def test_nothing_to_do_is_delivered_without_a_ping(self):
         os.environ["FAKE_CLAUDE_COUNTS"] = "draft=0 stamp=0 skip=2 pr=0"
         res = self.triage([self.claim()])

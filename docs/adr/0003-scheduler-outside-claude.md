@@ -6,6 +6,8 @@ amended-by: [ADR-0014]
 
 # ADR-0003: 定期実行は Claude の外に置き、新着があるときだけ `claude -p` を起こす
 
+![採らなかった案は、定期タスクが毎回 Claude を起こす形。決定は、AI を使わない dispatch.py が、新着があるときだけ claude -p を起こす形](figs/0003-scheduler-outside-claude.svg)
+
 ## 背景と課題
 
 - 要望は「定期タスク自体は Claude 以外で持ち、Claude のセッションは必要なときだけ動かす」こと。

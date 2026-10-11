@@ -101,7 +101,7 @@ class TickTest(unittest.TestCase):
         self.assertIn("FAILEDFILES=pending-a.json", line)
         self.assertTrue((self.home.failed / "pending-a.json").exists())
 
-    # --- PR の URL を含む件も、ふつうの仕分けとして扱う（ADR-0013） ---------------
+    # --- PR の URL を含む件も、ふつうの仕分けとして扱う ---------------
     def pr_claim(self, seconds):
         path = self.home.claims / "pending-pr.json"
         path.write_text(json.dumps({"items": [item(pr=True)]}), encoding="utf-8")

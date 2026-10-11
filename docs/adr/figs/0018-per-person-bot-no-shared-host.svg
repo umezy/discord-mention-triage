@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="410" viewBox="0 0 680 410" role="img" font-family="'Segoe UI','Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif">
+  <title>各自が自分のボットを作る。共有のホストは作らない</title>
+  <desc>採らなかった案: ボット 1 つで常時稼働の共有ホストが受け取り、各自の PC へ配り分ける。配り分けの権限判定、共有の郵便受け、運用と費用が要る。決定: 各自が自分のボットを作って管理者に入れてもらい、受付・開封・仕分けを自分の PC で動かし、自分の専用チャンネルへ届ける。見える範囲はボットのロールで Discord が守り、鍵は作った本人の PC だけに置く。</desc>
+  <defs><marker id="a-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-coral" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#D85A30" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <rect width="680" height="410" fill="#FFFFFF"/>
+  <rect x="20" y="14" width="640" height="52" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="340.0" y="31.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">Discord のサーバー</text>
+  <text x="340.0" y="52.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">検索 API と REST（GET だけ）</text>
+  <rect x="20" y="86" width="310" height="280" rx="12" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="5 4"/>
+  <text x="34" y="102" font-size="13" font-weight="500" fill="#993C1D" text-anchor="start" dominant-baseline="central">採らなかった案</text>
+  <rect x="60" y="118" width="230" height="44" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="175.0" y="140.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">ボット 1 つ</text>
+  <rect x="60" y="190" width="230" height="72" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+  <text x="175.0" y="209.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">共有のホスト（常時稼働）</text>
+  <text x="175.0" y="229.5" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">配り分けの権限判定</text>
+  <text x="175.0" y="246.5" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">共有の郵便受け・運用・費用</text>
+  <rect x="60" y="300" width="105" height="44" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="112.5" y="322.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">A さんの PC</text>
+  <rect x="185" y="300" width="105" height="44" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="237.5" y="322.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">B さんの PC</text>
+  <path d="M175 66 L175 116" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <path d="M175 162 L175 188" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <path d="M140 262 L112 298" fill="none" stroke="#D85A30" stroke-width="1.5" marker-end="url(#a-coral)"/>
+  <path d="M210 262 L238 298" fill="none" stroke="#D85A30" stroke-width="1.5" marker-end="url(#a-coral)"/>
+  <rect x="350" y="86" width="310" height="280" rx="12" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="5 4"/>
+  <text x="364" y="102" font-size="13" font-weight="500" fill="#0F6E56" text-anchor="start" dominant-baseline="central">決定</text>
+  <rect x="370" y="118" width="125" height="44" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="432.5" y="140.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">A さんのボット</text>
+  <rect x="370" y="190" width="125" height="72" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="432.5" y="217.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">A さんの PC</text>
+  <text x="432.5" y="238.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">受付・開封・仕分け</text>
+  <rect x="370" y="300" width="125" height="44" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="432.5" y="322.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">専用チャンネル</text>
+  <path d="M432 66 L432 116" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <path d="M432 162 L432 188" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <path d="M432 262 L432 298" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <rect x="515" y="118" width="125" height="44" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="577.5" y="140.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">B さんのボット</text>
+  <rect x="515" y="190" width="125" height="72" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="577.5" y="217.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">B さんの PC</text>
+  <text x="577.5" y="238.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">受付・開封・仕分け</text>
+  <rect x="515" y="300" width="125" height="44" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="577.5" y="322.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">専用チャンネル</text>
+  <path d="M577 66 L577 116" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <path d="M577 162 L577 188" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <path d="M577 262 L577 298" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <text x="340" y="388" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">決定の形では、見える範囲はボットのロールで Discord が守り、鍵は作った本人の PC だけに置く</text>
+</svg>

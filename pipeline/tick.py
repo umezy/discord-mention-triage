@@ -18,7 +18,7 @@ dispatch.py が、受付（watcher/search.py）のあとに、この部品を使
     run_claude が更新時刻を古くしておくので、5 分後に戻る。
   * MAX_ATTEMPTS 回やって駄目なら failed/ へ退避して1回だけ知らせる（毒入りの入力を無限に試さない）。
   * PR の URL を含む件も、同じ扱い。PR の自動レビューは無効（ADR-0004）で、どの件も「仕分け」として動くため。
-    レビュー用の別扱い（長いタイムアウト、自動では戻さない）は、有効にする決定と一緒に戻す（ADR-0013）。
+    レビュー用の別扱い（長いタイムアウト、自動では戻さない）は、有効にする決定と一緒に戻す（docs/security.md「PR の自動レビューは、いまは無効」）。
 
 使い方:
   python -X utf8 tick.py [--user NAME]          claim する
@@ -70,7 +70,7 @@ def payload_kind(path: Path) -> str:
     """'triage' = 仕分ける件 / 'unknown' = 読めない。
 
     PR の URL を含む件（`pull_requests`）も 'triage'。PR の自動レビューは無効で（ADR-0004）、その件も、ふつうの
-    仕分けとして動く。別の種類にすると、仕分けが失敗したときに自動で再試行されない（ADR-0013）。"""
+    仕分けとして動く。別の種類にすると、仕分けが失敗したときに自動で再試行されない。"""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
