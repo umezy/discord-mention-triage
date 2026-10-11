@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="372" viewBox="0 0 680 372" role="img" font-family="'Segoe UI','Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif">
+  <title>無人の実行には、専用のトークンを置く</title>
+  <desc>これまでは、端末の claude と、無人の claude -p が、PC に 1 つだけの対話用のログインを一緒に使っていた。端末でアカウントを切り替えると無人も切り替わり、ログインが使えなくなると無人も止まる。決定は、無人の claude -p に、claude setup-token で作る 1 年有効の専用のトークンを置く形。端末の側で何をしても、無人は同じアカウントで動く。</desc>
+  <defs><marker id="a-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-coral" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#D85A30" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <rect width="680" height="372" fill="#FFFFFF"/>
+  <rect x="20" y="14" width="640" height="150" rx="12" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="5 4"/>
+  <text x="34" y="30" font-size="13" font-weight="500" fill="#993C1D" text-anchor="start" dominant-baseline="central">これまで: 対話用のログインを、そのまま使う</text>
+  <rect x="40" y="46" width="176" height="48" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="128.0" y="59.75" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">端末の claude</text>
+  <text x="128.0" y="80.25" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">自分が対話で使う</text>
+  <rect x="40" y="104" width="176" height="48" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="128.0" y="117.75" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">無人の claude -p</text>
+  <text x="128.0" y="138.25" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">2 分おきの仕分け</text>
+  <rect x="276" y="67" width="156" height="64" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="354.0" y="88.75" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">対話用のログイン</text>
+  <text x="354.0" y="109.25" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">PC に 1 つだけ</text>
+  <path d="M216 72 L274 90" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <path d="M216 126 L274 108" fill="none" stroke="#D85A30" stroke-width="1.5" marker-end="url(#a-coral)"/>
+  <circle cx="458" cy="86" r="9" fill="#D85A30"/><path d="M454.5 82.5 L461.5 89.5 M461.5 82.5 L454.5 89.5" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+  <text x="474" y="86" font-size="12" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">切り替えると、無人も切り替わる</text>
+  <circle cx="458" cy="112" r="9" fill="#D85A30"/><path d="M454.5 108.5 L461.5 115.5 M461.5 108.5 L454.5 115.5" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+  <text x="474" y="112" font-size="12" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">使えなくなると、無人も止まる</text>
+  <rect x="20" y="178" width="640" height="150" rx="12" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="5 4"/>
+  <text x="34" y="194" font-size="13" font-weight="500" fill="#0F6E56" text-anchor="start" dominant-baseline="central">決定: 無人には、専用のトークンを置く</text>
+  <rect x="40" y="210" width="176" height="48" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="128.0" y="223.75" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">端末の claude</text>
+  <text x="128.0" y="244.25" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">自分が対話で使う</text>
+  <rect x="40" y="268" width="176" height="48" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="128.0" y="281.75" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">無人の claude -p</text>
+  <text x="128.0" y="302.25" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">2 分おきの仕分け</text>
+  <rect x="276" y="210" width="156" height="48" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="354.0" y="223.75" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">対話用のログイン</text>
+  <text x="354.0" y="244.25" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">PC に 1 つだけ</text>
+  <rect x="276" y="268" width="156" height="48" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="354.0" y="281.75" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">専用のトークン</text>
+  <text x="354.0" y="302.25" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">setup-token・1 年有効</text>
+  <path d="M216 234 L274 234" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <path d="M216 292 L274 292" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <circle cx="458" cy="279" r="9" fill="#1D9E75"/><path d="M454 279 L457 282 L462 276" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="474" y="279" font-size="12" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">端末で何をしても、変わらない</text>
+  <circle cx="458" cy="305" r="9" fill="#1D9E75"/><path d="M454 305 L457 308 L462 302" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="474" y="305" font-size="12" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">どの契約で動くかが、決まる</text>
+  <text x="340.0" y="354" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">CLAUDE_CODE_OAUTH_TOKEN は、対話用のログインより先に使われる</text>
+</svg>
