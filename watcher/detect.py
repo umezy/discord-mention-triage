@@ -34,7 +34,7 @@ def classify(view: MessageView, w: WatchedUser, my_role_ids: frozenset = frozens
     """直接メンション > ロールメンション > @everyone の順に判定する。
 
     返信のピン（Discord が返信先の著者を mentions に入れる）は直接メンションとして扱う。
-    元の `GET /users/@me/mentions` と同じ範囲。
+    Discord の受信ボックスに出るメンションと同じ範囲。
     """
     if view.guild_id is None:
         return Detection(None, "dm")

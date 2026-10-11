@@ -6,7 +6,7 @@ Webhook URL を読めるのは、このモジュールを使う Python だけ。
 設定は <ホーム>/.env から読む（コミットしない）:
     DIGEST_WEBHOOK=https://discord.com/api/webhooks/...        必須
     DIGEST_MENTION_USER_ID=1234567890                          任意。あればその人にメンションを付ける
-（旧 discord-watch の DISCORD_WATCH_WEBHOOK / DISCORD_WATCH_MENTION_USER_ID も読む）
+（古い名前の DISCORD_WATCH_WEBHOOK / DISCORD_WATCH_MENTION_USER_ID も読む）
 """
 
 from __future__ import annotations

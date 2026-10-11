@@ -40,7 +40,7 @@
 | 書ける場所 | `Edit(...)` の許可が `drafts/` と `out/` の下だけ | 他のファイルは作れない・変えられない |
 | 聞かれたとき | `--permission-mode dontAsk --permission-prompts none` | 許可が無い操作は、聞かずに拒否（記録に `denials` として残る） |
 | 認証 | 長期トークンだけ。`ANTHROPIC_API_KEY` 等は子プロセスの環境から外す | 意図せず API 課金になるのを防ぐ |
-| セッション記録 | `--no-session-persistence`（既定） | 本文を含む記録をディスクに残さない |
+| セッション記録 | `keep_transcripts`（`init` が書く設定は `true`） | `true` なら、本文を含む記録が `~/.claude/projects/` に残り、30 日で自動で消える。`false` なら `--no-session-persistence` を付け、残さない |
 
 Webhook URL は Claude には渡さない。投稿はこのリポジトリの Python（`notify.py`）が、Claude が書いた投稿本文のファイルを確認してから行う。
 Claude が不正な指示に従ってしまった場合でも、できるのは「`drafts/` と `out/` に変な内容のファイルを書く」ことまでで、
@@ -49,7 +49,7 @@ Claude が不正な指示に従ってしまった場合でも、できるのは�
 ## PR の自動レビューは、いまは無効
 
 有効にする設定は無い（`pr_auto_review: true` と書くと、設定の読み込みで止まる。黙って読み飛ばすと、有効にしたつもりで運用されるため）。
-PR の URL を含むメンションは、通常どおり仕分けられ、ダイジェストに
+PR の URL を含むメンションは、通常どおり仕分けられ、仕分けの結果に
 「PRレビュー依頼: <URL>」と表示されるだけで、レビューは走らない。
 失敗したときの再試行も、ほかの件と同じ。
 
@@ -88,10 +88,7 @@ Pro / Max では「信頼する端末」を必須にできる（[公式](https:/
 
 ## データがどこを通るか
 
-```
-Discord ─(検索/REST、GET だけ)→ このPCのディスク（~/.discord-mention-triage/） ─→ claude -p（サブスクの範囲）
-                                                                      └→ 本人専用チャンネル（Webhook）
-```
+![Discord から GET だけで PC に読み、本文は ~/.discord-mention-triage/ に残る。Claude（Anthropic）へは claude -p で、結果は Webhook で専用チャンネルへ。記録を残す設定なら、セッション記録が ~/.claude/projects/ に 30 日残る。リポジトリには置かない](figs/data-flow.svg)
 
 - 本文は、PC のディスク（`inbox/` `claims/` `processed/` `drafts/`）に残る。**リポジトリには置かない**
   （`config.py` はリポジトリ内を指す `state_root` を拒否し、`.gitignore` も本文の置き場を除外している）。
@@ -105,8 +102,9 @@ Discord ─(検索/REST、GET だけ)→ このPCのディスク（~/.discord-me
     どのアカウントで承認したかは、本人が覚えておく。
   - 根拠: [Data usage（Claude Code）](https://code.claude.com/docs/en/data-usage)、[Is my data used for model training?](https://privacy.claude.com/en/articles/10023580-is-my-data-used-for-model-training)、
     [How do I change my model improvement privacy settings?](https://privacy.claude.com/en/articles/12109829-how-do-i-change-my-model-improvement-privacy-settings)
-- **ダイジェストには元発言の引用が含まれ、本人専用チャンネルに複製される。** そのチャンネルが別のサーバーにあるなら、
+- **仕分けの結果には元発言の引用が含まれ、本人専用チャンネルに複製される。** そのチャンネルが別のサーバーにあるなら、
   元のサーバーのやり取りが、そのサーバーに複製される。置き場所は、元のサーバーの管理者と決めておく。
+- **記録を残す設定（`keep_transcripts: true`。`init` が書く設定）では、本文を含むセッション記録が `~/.claude/projects/` に残る。** 30 日で自動で消える（[ADR-0008](adr/0008-keep-session-transcripts.md)）。
 - **セッションの名前に、本文の頭（全角で 20 字まで）が入る**（記録を残す設定のとき）。取り込み（`desktop_import`）を使うと、
   開かなくても、デスクトップ版の一覧に見える。画面を共有するときは、一覧も映る。
 - ログ（`dispatch.log`）には、件数と理由しか書かない。受付の続きの位置（`poll.json`）と既出の ID（`state.json`）にも、本文は書かない。
