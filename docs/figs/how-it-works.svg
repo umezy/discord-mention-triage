@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="412" viewBox="0 0 900 412" role="img" font-family="'Segoe UI','Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif">
+  <title>しくみ</title>
+  <desc>タスクスケジューラが 2 分おきに起動し、受付、開封、仕分けが順に動く。受付は Discord のサーバーへ GET だけを出して inbox に書き出す。開封は inbox から claims へ移す。仕分けは claude -p に標準入力で指示し、claude -p は drafts と out に書いて、結果を仕分けへ返す。仕分けは、その結果を確かめてから、自分専用チャンネルへ Webhook で投稿する。投稿がボットの検索に出るまで約 100 秒、起動は 2 分おき、仕分けに 1〜2 分で、メンションから 3〜6 分で届く。鍵 1 のボットのトークンは Discord を読むのに、鍵 2 の Webhook の URL は専用チャンネルへ投稿するのに、鍵 3 の OAuth トークンは claude -p を動かすのに要る。</desc>
+  <style>
+    .bg { fill: #ffffff; stroke: #d3ddd9; }
+    .box { fill: #ffffff; stroke: #15201e; stroke-width: 1.2; }
+    .zone { fill: #f3f6f5; stroke: #55645f; stroke-width: 1; stroke-dasharray: 5 4; }
+    .file { fill: #e9efed; stroke: #55645f; stroke-width: 1; }
+    .edge { stroke: #15201e; stroke-width: 1.3; fill: none; }
+    .hot { stroke: #0a6a5e; stroke-width: 2; fill: none; }
+    .head { fill: #15201e; }
+    .hothead { fill: #0a6a5e; }
+    text { fill: #15201e; font-size: 12px; }
+    text.t { font-weight: 700; font-size: 13px; }
+    text.m { font-family: Consolas, 'Cascadia Mono', monospace; font-size: 11px; }
+    text.s { fill: #55645f; font-size: 11px; }
+    text.hl { fill: #0a6a5e; font-weight: 700; }
+    .tmbox { fill: #e9efed; stroke: #d3ddd9; stroke-width: 1; }
+    text.tm { font-size: 11px; }
+    .kbox { fill: #fff0c9; stroke: #e2b54a; stroke-width: 1.2; }
+    text.kt { fill: #7d4c00; font-weight: 700; font-size: 11.5px; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path class="head" d="M0,0 L8,4 L0,8 z"/></marker>
+    <marker id="b" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path class="hothead" d="M0,0 L8,4 L0,8 z"/></marker>
+  </defs>
+
+  <rect class="bg" x="0.5" y="0.5" width="899" height="411" rx="12"/>
+
+  <rect class="zone" x="250" y="16" width="634" height="380" rx="12"/>
+  <text class="s" x="266" y="38">あなたの PC</text>
+
+  <!-- PC の外 -->
+  <rect class="box" x="16" y="120" width="194" height="64" rx="8"/>
+  <text class="t" x="113" y="147" text-anchor="middle">Discord のサーバー</text>
+  <text class="s" x="113" y="167" text-anchor="middle">検索 API と REST</text>
+  <rect class="kbox" x="36" y="190" width="154" height="22" rx="11"/>
+  <text class="kt" x="113" y="205" text-anchor="middle">鍵 ① ボットのトークン</text>
+  <rect class="tmbox" x="21" y="218" width="184" height="22" rx="11"/>
+  <text class="tm" x="113" y="233" text-anchor="middle">投稿が検索に出るまで 約 100 秒</text>
+  <rect class="box" x="16" y="272" width="194" height="64" rx="8"/>
+  <text class="t" x="113" y="299" text-anchor="middle">自分専用チャンネル</text>
+  <text class="s" x="113" y="319" text-anchor="middle">自分だけのサーバー</text>
+  <rect class="kbox" x="36" y="342" width="154" height="22" rx="11"/>
+  <text class="kt" x="113" y="357" text-anchor="middle">鍵 ② Webhook の URL</text>
+  <rect class="tmbox" x="25" y="370" width="176" height="22" rx="11"/>
+  <text class="tm" x="113" y="385" text-anchor="middle">メンションから 3〜6 分で届く</text>
+
+  <!-- 入口と 3 つの段 -->
+  <rect class="box" x="280" y="52" width="190" height="40" rx="8"/>
+  <text class="t" x="375" y="77" text-anchor="middle">タスクスケジューラ</text>
+  <line class="edge" x1="375" y1="92" x2="375" y2="120" marker-end="url(#a)"/>
+  <rect class="tmbox" x="386" y="96" width="146" height="20" rx="10"/>
+  <text class="tm" x="459" y="110" text-anchor="middle">2 分おき。最大 2 分待ち</text>
+
+  <rect class="box" x="280" y="124" width="190" height="56" rx="8"/>
+  <text class="t" x="375" y="147" text-anchor="middle">① 受付</text>
+  <text class="m" x="375" y="166" text-anchor="middle">watcher/search.py</text>
+  <line class="edge" x1="375" y1="180" x2="375" y2="196" marker-end="url(#a)"/>
+  <rect class="box" x="280" y="200" width="190" height="56" rx="8"/>
+  <text class="t" x="375" y="223" text-anchor="middle">② 開封</text>
+  <text class="m" x="375" y="242" text-anchor="middle">pipeline/tick.py</text>
+  <line class="edge" x1="375" y1="256" x2="375" y2="272" marker-end="url(#a)"/>
+  <rect class="box" x="280" y="276" width="190" height="56" rx="8"/>
+  <text class="t" x="375" y="299" text-anchor="middle">③ 仕分け</text>
+  <text class="m" x="375" y="318" text-anchor="middle">pipeline/run_claude.py</text>
+  <text class="s" x="375" y="352" text-anchor="middle">新着があるときだけ</text>
+
+  <!-- それぞれが触るもの -->
+  <rect class="file" x="570" y="134" width="120" height="36" rx="6"/>
+  <text class="m" x="630" y="156" text-anchor="middle">inbox/</text>
+  <rect class="file" x="570" y="210" width="120" height="36" rx="6"/>
+  <text class="m" x="630" y="232" text-anchor="middle">claims/</text>
+  <line class="edge" x1="630" y1="170" x2="630" y2="206" marker-end="url(#a)"/>
+  <rect class="box" x="570" y="276" width="120" height="56" rx="8"/>
+  <text class="t" x="630" y="299" text-anchor="middle">claude -p</text>
+  <text class="s" x="630" y="318" text-anchor="middle">道具は 5 つだけ</text>
+  <rect class="kbox" x="558" y="338" width="144" height="22" rx="11"/>
+  <text class="kt" x="630" y="353" text-anchor="middle">鍵 ③ OAuth トークン</text>
+  <rect class="tmbox" x="598" y="366" width="64" height="22" rx="11"/>
+  <text class="tm" x="630" y="381" text-anchor="middle">1〜2 分</text>
+  <rect class="file" x="746" y="286" width="122" height="36" rx="6"/>
+  <text class="m" x="807" y="308" text-anchor="middle">drafts/  out/</text>
+
+  <!-- 線 -->
+  <line class="hot" x1="280" y1="152" x2="214" y2="152" marker-end="url(#b)"/>
+  <text class="hl" x="246" y="143" text-anchor="middle">GET だけ</text>
+  <line class="edge" x1="470" y1="152" x2="566" y2="152" marker-end="url(#a)"/>
+  <text class="s" x="518" y="143" text-anchor="middle">書き出す</text>
+  <line class="edge" x1="470" y1="228" x2="566" y2="228" marker-end="url(#a)"/>
+  <text class="s" x="518" y="219" text-anchor="middle">移す</text>
+  <line class="edge" x1="470" y1="296" x2="566" y2="296" marker-end="url(#a)"/>
+  <text class="s" x="518" y="288" text-anchor="middle">標準入力で指示</text>
+  <line class="edge" x1="570" y1="314" x2="474" y2="314" marker-end="url(#a)"/>
+  <text class="s" x="518" y="329" text-anchor="middle">結果を返す</text>
+  <line class="edge" x1="690" y1="304" x2="742" y2="304" marker-end="url(#a)"/>
+  <text class="s" x="716" y="295" text-anchor="middle">書く</text>
+  <line class="hot" x1="280" y1="304" x2="214" y2="304" marker-end="url(#b)"/>
+  <text class="hl" x="246" y="295" text-anchor="middle">Webhook</text>
+</svg>

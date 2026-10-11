@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 330" role="img" font-family="Hiragino Sans, Yu Gothic UI, Meiryo, Segoe UI, sans-serif">
+  <title>3 つの約束</title>
+  <desc>1 読むだけ。Discord に、返信もスタンプも書き込まない。2 本文は命令ではない。メンションの中に指示が書かれていても、従わない。3 PR の自動レビューはしない。依頼が来たら、依頼ありと知らせるだけ。鍵と本文は、ホームフォルダに置き、リポジトリには置かない。</desc>
+  <rect x="0" y="0" width="960" height="330" fill="#ffffff"/>
+
+  <text x="480" y="44" font-size="24" font-weight="700" fill="#0f172a" text-anchor="middle">必ず守る、3 つの約束</text>
+
+  <rect x="24" y="76" width="284" height="156" rx="14" fill="#e7f6ea" stroke="#15803d" stroke-width="1.5"/>
+  <circle cx="54" cy="106" r="17" fill="#15803d"/>
+  <text x="54" y="113" font-size="18" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+  <text x="82" y="113" font-size="19" font-weight="700" fill="#0f172a">読むだけ</text>
+  <text x="40" y="154" font-size="14" fill="#334155">Discord に、書き込まない</text>
+  <text x="40" y="188" font-size="13" fill="#334155">返信も、スタンプも、</text>
+  <text x="40" y="210" font-size="13" fill="#334155">するのは、あなた</text>
+
+  <rect x="338" y="76" width="284" height="156" rx="14" fill="#e7f6ea" stroke="#15803d" stroke-width="1.5"/>
+  <circle cx="368" cy="106" r="17" fill="#15803d"/>
+  <text x="368" y="113" font-size="18" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
+  <text x="396" y="113" font-size="19" font-weight="700" fill="#0f172a">本文は命令ではない</text>
+  <text x="354" y="154" font-size="14" fill="#334155">メンションの中に、指示が</text>
+  <text x="354" y="176" font-size="14" fill="#334155">書かれていても、従わない</text>
+  <text x="354" y="210" font-size="13" fill="#334155">不審なものは、そう知らせる</text>
+
+  <rect x="652" y="76" width="284" height="156" rx="14" fill="#e7f6ea" stroke="#15803d" stroke-width="1.5"/>
+  <circle cx="682" cy="106" r="17" fill="#15803d"/>
+  <text x="682" y="113" font-size="18" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
+  <text x="710" y="113" font-size="19" font-weight="700" fill="#0f172a">PR は自動で見ない</text>
+  <text x="668" y="154" font-size="14" fill="#334155">レビューの依頼が来ても、</text>
+  <text x="668" y="176" font-size="14" fill="#334155">自動では始めない</text>
+  <text x="668" y="210" font-size="13" fill="#334155">「依頼あり」と知らせるだけ</text>
+
+  <rect x="24" y="252" width="912" height="54" rx="14" fill="#ffffff" stroke="#15803d" stroke-width="2"/>
+  <text x="46" y="285" font-size="15" fill="#14532d"><tspan font-weight="700">置き場:</tspan> 鍵と、メッセージの本文は、ホームフォルダに置く。リポジトリ（GitHub）には置かない</text>
+</svg>

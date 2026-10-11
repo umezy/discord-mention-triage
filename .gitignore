@@ -1,0 +1,32 @@
+# 秘密・実環境の状態（本来は ~/.discord-mention-triage/ にあり、config.py がリポジトリ内に置くのを拒否する。念のため）
+.env
+*.env
+config/config.json
+cursors.json
+heartbeat.json
+state.json
+poll.json
+skips*.log
+alerts.json
+claims_meta.json
+
+# Discord のメッセージ本文を含みうるもの（コミット禁止）
+inbox/
+claims/
+processed/
+drafts/
+failed/
+holding/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

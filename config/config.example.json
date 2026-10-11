@@ -1,0 +1,29 @@
+{
+  "state_root": "~/.discord-mention-triage",
+  "token_env_path": "~/.discord-mention-triage/.env",
+  "watchers": [
+    {
+      "name": "yourname",
+      "user_id": "REPLACE_WITH_YOUR_DISCORD_USER_ID",
+      "guild_allowlist": [],
+      "channel_blocklist": ["REPLACE_WITH_YOUR_DIGEST_CHANNEL_ID"],
+      "context_before": 15,
+      "context_after": 10,
+      "include_everyone": false,
+      "read_dirs": ["C:/path/to/a/repo/claude/may/read/to/check/facts"],
+      "triage_model": "opus",
+      "triage_effort": "xhigh",
+      "pr_policy": {
+        "allowed_orgs": ["your-github-org"],
+        "requester_role_ids": ["REPLACE_WITH_EMPLOYEE_ROLE_ID"],
+        "allow_bot_requesters": false
+      }
+    }
+  ],
+  "catchup_max_age_hours": 72,
+  "search_overlap_minutes": 30,
+  "claude_bin": "",
+  "claude_timeout_sec": 1800,
+  "keep_transcripts": true,
+  "desktop_import": false
+}

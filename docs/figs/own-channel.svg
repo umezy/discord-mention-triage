@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 380" role="img" font-family="Hiragino Sans, Yu Gothic UI, Meiryo, Segoe UI, sans-serif">
+  <title>専用チャンネルを作って、2 つを控える</title>
+  <desc>1 自分だけのサーバーを作る（サーバーを追加、オリジナルの作成、自分と友達のため、新規作成）。2 チャンネルを作る（テキストチャンネルの＋、名前を付ける、チャンネルを作成）。3 Webhook を作る（歯車、連携サービス、ウェブフック、新しいウェブフック）。4 ウェブフック URL をコピーして鍵 2 として控え、チャンネル ID をコピーして ID として控える。自分だけのサーバーには自分しかいないので、中のチャンネルは自分だけが見られる。Webhook の URL は鍵なので、チャットにもメモにも貼らない。</desc>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="960" height="380" fill="#ffffff"/>
+
+  <text x="480" y="44" font-size="26" font-weight="700" fill="#0f172a" text-anchor="middle">専用チャンネルを作って、2 つを控える</text>
+
+  <!-- 1 -->
+  <rect x="33" y="72" width="210" height="184" rx="14" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+  <text x="49" y="108" font-size="17" font-weight="700" fill="#0f172a">1. サーバーを作る</text>
+  <text x="49" y="142" font-size="13" fill="#334155">＋（サーバーを追加）</text>
+  <text x="49" y="166" font-size="13" fill="#334155">→ オリジナルの作成</text>
+  <text x="49" y="190" font-size="13" fill="#334155">→ 自分と友達のため</text>
+  <text x="49" y="214" font-size="13" fill="#334155">→ 名前を付けて、新規作成</text>
+
+  <line x1="245" y1="164" x2="258" y2="164" stroke="#64748b" stroke-width="2.5" marker-end="url(#ah)"/>
+
+  <!-- 2 -->
+  <rect x="261" y="72" width="210" height="184" rx="14" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+  <text x="277" y="108" font-size="17" font-weight="700" fill="#0f172a">2. チャンネルを作る</text>
+  <text x="277" y="142" font-size="13" fill="#334155">テキストチャンネルの ＋</text>
+  <text x="277" y="166" font-size="13" fill="#334155">→ 名前を付ける</text>
+  <text x="277" y="190" font-size="13" fill="#334155">→ チャンネルを作成</text>
+
+  <line x1="473" y1="164" x2="486" y2="164" stroke="#64748b" stroke-width="2.5" marker-end="url(#ah)"/>
+
+  <!-- 3 -->
+  <rect x="489" y="72" width="210" height="184" rx="14" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.5"/>
+  <text x="505" y="108" font-size="17" font-weight="700" fill="#0f172a">3. Webhook を作る</text>
+  <text x="505" y="142" font-size="13" fill="#334155">歯車（チャンネルの編集）</text>
+  <text x="505" y="166" font-size="13" fill="#334155">→ 連携サービス</text>
+  <text x="505" y="190" font-size="13" fill="#334155">→ ウェブフック</text>
+  <text x="505" y="214" font-size="13" fill="#334155">→ 新しいウェブフック</text>
+
+  <line x1="701" y1="164" x2="714" y2="164" stroke="#64748b" stroke-width="2.5" marker-end="url(#ah)"/>
+
+  <!-- 4 -->
+  <rect x="717" y="72" width="210" height="184" rx="14" fill="#e7f6ea" stroke="#15803d" stroke-width="1.5"/>
+  <text x="733" y="108" font-size="17" font-weight="700" fill="#0f172a">4. 2 つを控える</text>
+  <text x="733" y="142" font-size="13" font-weight="700" fill="#0f172a">ウェブフックURLをコピー</text>
+  <text x="733" y="166" font-size="13" fill="#334155">＝ 鍵 ②（人に見せない）</text>
+  <text x="733" y="200" font-size="13" font-weight="700" fill="#0f172a">チャンネルIDをコピー</text>
+  <text x="733" y="224" font-size="13" fill="#334155">＝ ID（伝えてよい）</text>
+
+  <!-- 下の帯 -->
+  <rect x="33" y="272" width="894" height="40" rx="10" fill="#e7f6ea" stroke="#15803d" stroke-width="1.5"/>
+  <text x="53" y="297" font-size="14" font-weight="700" fill="#15803d">自分だけのサーバー</text>
+  <text x="216" y="297" font-size="14" fill="#0f172a">あなたしかいないので、中のチャンネルは、あなただけが見られる</text>
+  <rect x="33" y="322" width="894" height="40" rx="10" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>
+  <text x="53" y="347" font-size="14" font-weight="700" fill="#854d0e">Webhook の URL は鍵</text>
+  <text x="216" y="347" font-size="14" fill="#0f172a">知っている人は、誰でもそこへ投稿できる。チャットにも、メモにも貼らない</text>
+</svg>
