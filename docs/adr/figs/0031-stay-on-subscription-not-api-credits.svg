@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="328" viewBox="0 0 680 328" role="img" font-family="'Segoe UI','Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif">
+  <title>無人実行はサブスクの利用枠で動かし、月額 API クレジットには切り替えない</title>
+  <desc>採らなかった案: claude -p に API キーを渡して、Max と Team に付く月額 API クレジットで動かす。クレジットはサブスクで使える量の数 % ほどで、使い切ると次の月まで止まる。決定: claude -p は専用のトークンで動き、サブスクの利用枠を使う。仕分けは週の利用枠の数 % ほどで、どの契約でも同じ手順。API クレジットは、ほかの用途に回す。数 % は、2026-10 時点の第三者の実測による推定。</desc>
+  <defs><marker id="a-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-coral" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#D85A30" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <rect width="680" height="328" fill="#FFFFFF"/>
+  <rect x="20" y="14" width="640" height="122" rx="12" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="5 4"/>
+  <text x="34" y="30" font-size="13" font-weight="500" fill="#993C1D" text-anchor="start" dominant-baseline="central">採らなかった案: API クレジットで動かす</text>
+  <rect x="40" y="48" width="150" height="74" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="115" y="74.75" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">claude -p</text>
+  <text x="115" y="95.25" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">API キーを渡す</text>
+  <rect x="250" y="48" width="180" height="74" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+  <text x="340" y="66.25" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">月額 API クレジット</text>
+  <text x="340" y="86.75" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">サブスクの数 % ほど</text>
+  <text x="340" y="103.75" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">Max / Team だけ</text>
+  <rect x="490" y="48" width="150" height="74" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+  <text x="565" y="74.75" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">使い切ると</text>
+  <text x="565" y="95.25" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">次の月まで止まる</text>
+  <path d="M190 85 L248 85" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <path d="M430 85 L488 85" fill="none" stroke="#D85A30" stroke-width="1.5" marker-end="url(#a-coral)"/>
+  <rect x="20" y="150" width="640" height="122" rx="12" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="5 4"/>
+  <text x="34" y="166" font-size="13" font-weight="500" fill="#0F6E56" text-anchor="start" dominant-baseline="central">決定: サブスクの利用枠で動かす</text>
+  <rect x="40" y="184" width="150" height="74" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="115" y="210.75" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">claude -p</text>
+  <text x="115" y="231.25" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">専用のトークン</text>
+  <rect x="250" y="184" width="180" height="74" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="340" y="202.25" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">サブスクの利用枠</text>
+  <text x="340" y="222.75" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">仕分けは週の数 % ほど</text>
+  <text x="340" y="239.75" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">どの契約でも同じ手順</text>
+  <rect x="490" y="184" width="150" height="74" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5" stroke-dasharray="4 3"/>
+  <text x="565" y="210.75" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">API クレジット</text>
+  <text x="565" y="231.25" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">ほかの用途に回す</text>
+  <path d="M190 221 L248 221" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <text x="340" y="310" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">数 % は、2026-10 時点の第三者の実測による推定</text>
+</svg>
