@@ -45,8 +45,8 @@ JST = timezone(timedelta(hours=9))
 RETRY_AFTER_SEC = 5 * 60  # 失敗した claim を戻すまでの待ち（tick の掃除が戻す）
 FAIL_ALERT_COOLDOWN_SEC = 30 * 60
 COUNTS_RE = re.compile(r"COUNTS\s+draft=(\d+)\s+stamp=(\d+)\s+skip=(\d+)\s+pr=(\d+)")
-# 対応不要でも、本人に見てもらう印（triage.md の「不審な指示」「機微の可能性」）。本文にあれば、通知する
-ATTENTION_MARKS = ("⚠", "🔒")
+# 対応不要でも、本人に見てもらう印（triage.md の「不審な指示」）。本文にあれば、通知する
+ATTENTION_MARKS = ("⚠",)
 
 PR_NOTE = (
     "**PR について**: この実行では PR レビューは自動では走りません（無人の PR レビューは未有効）。"
