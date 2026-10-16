@@ -515,8 +515,30 @@ class Command(Base):
         self.assertEqual(run_claude.rule_path(Path("C:/Users/x/y")), "//c/Users/x/y")
 
 
+class FakeView:
+    """見ていたセッションを控えて、取り込んだあとに戻す係（desktop_view.DesktopView）の偽物。本物のデスクトップ版には触らない。"""
+
+    def __init__(self, viewed="local_viewed", result="ok", fail_remember=False):
+        self.viewed, self.result, self.fail_remember = viewed, result, fail_remember
+        self.calls = []
+
+    def remember(self):
+        self.calls.append("remember")
+        if self.fail_remember:
+            raise OSError("cannot read")
+        return self.viewed
+
+    def go_back(self, viewed, cli_session_id):
+        self.calls.append(("go_back", viewed, cli_session_id))
+        return self.result
+
+
 class DesktopImport(Base):
     """記録したセッションを、仕分けのたびにデスクトップ版の左側へ取り込む（失敗しても仕分けは成功のまま）。"""
+
+    def setUp(self):
+        super().setUp()
+        self.view = FakeView()
 
     def keep_cfg(self, **kw):
         data = {"state_root": self.cfg.state_root.as_posix(), "keep_transcripts": True, "desktop_import": True,
@@ -526,7 +548,7 @@ class DesktopImport(Base):
 
     def run_triage(self, cfg, import_fn, name="pending-d.json"):
         return run_claude.triage(self.home, cfg.watchers[0], cfg, [self.claim(name)], command=FAKE, now=NOW,
-                                 poster=self.poster, import_fn=import_fn)
+                                 poster=self.poster, import_fn=import_fn, view=self.view)
 
     def test_imports_the_session_after_the_digest_is_posted(self):
         calls = []
@@ -576,15 +598,48 @@ class DesktopImport(Base):
         self.post_fails = True
         f = self.claim("pending-r.json")
         res = run_claude.triage(self.home, cfg.watchers[0], cfg, [f], command=FAKE, now=NOW, poster=self.poster,
-                                import_fn=lambda *a, **k: calls.append(a) or "ok")
+                                import_fn=lambda *a, **k: calls.append(a) or "ok", view=self.view)
         self.assertEqual(res["reason"], "post_failed")
         self.assertEqual(calls, [])  # 投稿に失敗した回は取り込まない
         self.post_fails = False
         os.environ["FAKE_CLAUDE_MODE"] = "fail"  # もう一度 Claude を動かすなら失敗する。動かさないので成功する
         res = run_claude.triage(self.home, cfg.watchers[0], cfg, [f], command=FAKE, now=NOW, poster=self.poster,
-                                import_fn=lambda *a, **k: calls.append(a) or "ok")
+                                import_fn=lambda *a, **k: calls.append(a) or "ok", view=self.view)
         self.assertEqual(res["reason"], "reused_digest")
         self.assertEqual([c[1] for c in calls], ["sess-fake"])  # 記録しておいた session_id で取り込む
+
+    def test_returns_to_the_session_that_was_being_viewed(self):
+        # 取り込むと、デスクトップ版の表示がそのセッションへ移る。取り込む前に見ていたセッションを控えて、そこへ戻す
+        order = []
+        self.view.remember = lambda: order.append("remember") or "local_viewed"
+        res = self.run_triage(self.keep_cfg(), lambda *a, **k: order.append("import") or "ok")
+        self.assertEqual(order, ["remember", "import"])
+        self.assertEqual(self.view.calls, [("go_back", "local_viewed", "sess-fake")])
+        self.assertEqual(res["desktop_return"], "ok")
+        rec = json.loads(next((self.home.root / "runs").glob("*.json")).read_text(encoding="utf-8"))
+        self.assertEqual(rec["desktop_return"], "ok")
+
+    def test_no_return_when_the_import_failed(self):
+        res = self.run_triage(self.keep_cfg(), lambda *a, **k: "exit_1")
+        self.assertEqual(self.view.calls, ["remember"])
+        self.assertNotIn("desktop_return", res)
+
+    def test_the_import_still_happens_when_the_viewed_session_cannot_be_read(self):
+        self.view = FakeView(fail_remember=True)
+        calls = []
+        res = self.run_triage(self.keep_cfg(), lambda *a, **k: calls.append(a) or "ok")
+        self.assertTrue(res["ok"], res)
+        self.assertEqual([c[1] for c in calls], ["sess-fake"])
+        self.assertEqual(self.view.calls, ["remember", ("go_back", "", "sess-fake")])
+
+    def test_a_failure_to_return_does_not_fail_the_triage(self):
+        def boom(viewed, cli_session_id):
+            raise RuntimeError("desktop gone")
+
+        self.view.go_back = boom
+        res = self.run_triage(self.keep_cfg(), lambda *a, **k: "ok")
+        self.assertTrue(res["ok"], res)
+        self.assertEqual((res["desktop_import"], res["desktop_return"]), ("ok", "error"))
 
     def test_import_command_and_results(self):
         self.assertEqual(run_claude.desktop_import_command("CLAUDE", "abc"), ["CLAUDE", "--desktop", "--resume", "abc"])

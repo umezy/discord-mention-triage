@@ -38,6 +38,7 @@ from pathlib import Path
 from common import REPO_ROOT, add_target_args, p, resolve  # noqa: E402
 from watcher.store import read_json, write_json_atomic  # noqa: E402
 import claude_bin  # noqa: E402
+import desktop_view  # noqa: E402
 import notify  # noqa: E402
 import session_naming  # noqa: E402
 import tick  # noqa: E402
@@ -401,7 +402,7 @@ def age_claims(files, now: float) -> None:
 
 
 def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = None, poster=notify.post,
-           import_fn=import_to_desktop) -> dict:
+           import_fn=import_to_desktop, view=None) -> dict:
     """仕分けを1回実行する。例外は投げず、結果の辞書を返す（ok / reason / counts / ...）。"""
     now = now or datetime.now(JST)
     files = [Path(f) for f in files if Path(f).exists()]
@@ -489,12 +490,23 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
         home.clear_alert(reason)
     summary.update(ok=True, reason=summary["reason"] or "done", post=line)
     if cfg.desktop_import and cfg.keep_transcripts and session_id:
-        # 投稿のあと、成功した回だけ。結果は記録に残すが、失敗しても仕分けの成否には影響させない
+        # 投稿のあと、成功した回だけ。結果は記録に残すが、失敗しても仕分けの成否には影響させない。
+        # 取り込むと、デスクトップ版の表示がそのセッションへ移るので、見ていたセッションへ戻す（ADR-0035）
+        view = view or desktop_view.DesktopView()
+        try:
+            viewed = view.remember()
+        except Exception:  # noqa: BLE001 - 見ていたセッションが分からなくても、取り込みはする（戻さないだけ）
+            viewed = ""
         try:
             summary["desktop_import"] = import_fn(
                 claude or claude_bin.find_claude(cfg.claude_bin), session_id, home, child_env(home))
         except Exception:  # noqa: BLE001
             summary["desktop_import"] = "error"
+        if summary["desktop_import"] == "ok":
+            try:
+                summary["desktop_return"] = view.go_back(viewed, session_id)
+            except Exception:  # noqa: BLE001
+                summary["desktop_return"] = "error"
     write_summary(home, summary, started)
     return summary
 

@@ -72,6 +72,11 @@ claude -p "Follow the task written on stdin." --model opus --effort xhigh
   2026-10-04 の実測。保存はされるが、デスクトップ版が把握しているセッションには載らなかった）。
 - **`desktop_import: true` なら、仕分けのたびにデスクトップ版の左側へ自動で取り込む。** 投稿のあと、成功した回だけ
   `claude --desktop --resume <ID>` を呼ぶ。取り込みの失敗は実行記録の `desktop_import` に残るだけで、仕分けの成否には影響しない。
+  - **取り込むと、デスクトップ版が前面に出て、表示がそのセッションへ移る**（取り込むだけで開かない指定は無い）。そこで、取り込む前に見ていたセッションを控え、
+    取り込んだセッションが開いたら、すぐそこへ戻す（`pipeline/desktop_view.py`、[ADR-0035](adr/0035-return-to-viewed-session.md)）。
+    見ていたセッションは、デスクトップ版の記録（`%APPDATA%\Claude\claude-code-sessions\…\local_<ID>.json`）の `lastFocusedAt` がいちばん新しいもの。
+    戻すのは `claude://code/continue?session=local_<ID>` のリンク。仕分けのセッションが映るのは 1〜2 秒の見込み。結果は実行記録の `desktop_return`
+    （`ok` / `not_opened` / `nothing_viewed` / `unsupported` / `error`）。戻せなくても、取り込みは続ける。Windows だけ。
   - 名前は `<送り主>「<用件の頭>」#<場所> ほかN件`（例: `alice「来週の予定を教えてもらえますか」#dev`）。届いた件から、機械的に作る
     （`pipeline/session_naming.py`）。用件は、宛先になった発言の頭で、メンション・URL・
     カスタム絵文字は除く。場所は、チャンネル名（スレッドなら、題）。
