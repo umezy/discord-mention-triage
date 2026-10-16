@@ -77,6 +77,13 @@ class BuildItem(unittest.TestCase):
     def test_role_kind_is_not_direct(self):
         self.assertFalse(self.build(kind="role")["direct"])
 
+    def test_context_messages_carry_their_ids(self):
+        # 前の仕分けの続きかを、ID で見分ける（pipeline/continuation.py）。宛先の発言は、これまでの形のまま
+        item = self.build(before=[snap(990, "a")], after=[snap(1010, "c")])
+        self.assertEqual(set(item["context_before"][0]), LEGACY_SLIM_KEYS | {"id"})
+        self.assertEqual((item["context_before"][0]["id"], item["context_after"][0]["id"]), ("990", "1010"))
+        self.assertNotIn("id", item["mention"])
+
     def test_context_order_is_preserved(self):
         item = self.build(before=[snap(1, "a"), snap(2, "b")], after=[snap(3, "c")])
         self.assertEqual([m["text"] for m in item["context_before"]], ["a", "b"])

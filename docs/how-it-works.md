@@ -57,6 +57,7 @@ claude -p "Follow the task written on stdin." --model opus --effort xhigh
   --add-dir <claims> [--add-dir <read_dirs と、その回の件の場所に当てた channel_read_dirs>…]
   --strict-mcp-config --disable-slash-commands --setting-sources project,local
   --output-format json --no-session-persistence
+  （記録を残す設定で、同じ流れの続きの回は --no-session-persistence の代わりに --resume <前の ID> --fork-session）
 ```
 
 - 長い日本語の指示は**標準入力**で渡す（Windows ではコマンドライン引数の日本語が壊れる）。
@@ -94,6 +95,14 @@ claude -p "Follow the task written on stdin." --model opus --effort xhigh
   - 取り込んだセッションの **Remote Control は、自動では ON にならない**（デスクトップ版の「新しいセッションを Remote Control に
     接続する」設定は、デスクトップ版で始めたセッションにだけ効く。`claude -p --remote-control` も、取り込み後は OFF だった）。
     使いたい回だけ、デスクトップ版のツールバーのスイッチ（または `/remote-control`）で ON にする。
+- **同じ流れの続きは、前の仕分けの会話を写したセッションで仕分ける**（記録を残す設定のとき。[ADR-0036](adr/0036-continue-the-same-flow.md)）。
+  仕分けに成功したら、場所（チャンネル。スレッドならスレッド）ごとに、セッション ID と仕分けたメッセージの ID を `sessions.json` に控える。
+  次の回で、claim した件がぜんぶ同じ場所にあり、控えた件が前の会話に入っていれば、`--resume <前の ID> --fork-session` で、
+  前の会話（本人がデスクトップ版で続けて話した分も）を写した新しいセッションで仕分け、名前に「（続き）」を付ける。
+  - 前のセッションには、そのまま書き足さない。デスクトップ版は、取り込んだセッションの続きの位置を自分で覚えていて、外から書き足した分を読まず、
+    本人が次に話すと、記録が枝分かれする（2026-10-16 の実測）。そのため、デスクトップ版の一覧には、これまでどおり 1 回ごとに 1 件並ぶ。
+  - 場所がまたがる回、控えた件が前の会話に無い回、前のセッションの記録が消えた回は、新しいセッション。続けた回が失敗したら、
+    その場所の控えを消し、やり直しは新しいセッションにする。
 - 保存した記録は、Claude Code の既定で **30 日後に自動削除**される（`cleanupPeriodDays`）。不要になれば `claude purge` で消せる。
 
 ## デスクトップ版との関係
@@ -169,6 +178,7 @@ claude -p "Follow the task written on stdin." --model opus --effort xhigh
 | `<名前>/failed/` | 3 回失敗して、よけたメンション |
 | `<名前>/runs/` | 仕分けの記録（件数、かかった時間など。本文は入らない） |
 | `<名前>/state.json`、`poll.json` | 拾い済みの控えと、どこまで読んだか |
+| `<名前>/sessions.json` | 場所ごとの、最後の仕分けのセッション ID と、仕分けたメッセージの ID（同じ流れの続きを見分ける。本文は入らない） |
 | `dispatch.log` | 動いた記録。新着が無い回は、残らない |
 
 ### リポジトリ

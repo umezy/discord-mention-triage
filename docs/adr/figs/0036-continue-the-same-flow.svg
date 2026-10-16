@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="310" viewBox="0 0 680 310" role="img" font-family="'Segoe UI','Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif">
+  <title>同じ流れの続きは、前の会話を写したセッションで仕分ける</title>
+  <desc>これまでは、1 件目をセッション A で仕分け、本人が A の続きで返信を相談しても、同じ流れの 2 件目は、A での相談を知らない新しいセッション B で仕分けた。これからは、2 件目の前の会話に 1 件目が入っていれば、A の会話と相談を写したセッション B（続き）で仕分ける。A には、そのまま書き足さない。デスクトップ版は、外から書き足した分を読まず、本人が次に話すと記録が枝分かれするため。続けるのは、同じ場所で、前に仕分けた件が、前の会話に入っているときだけ。</desc>
+  <defs><marker id="a-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <rect width="680" height="310" fill="#FFFFFF"/>
+  <text x="15" y="24" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">これまで</text>
+  <rect x="15" y="40" width="200" height="60" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="115.0" y="61.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">1 件目: セッション A</text>
+  <text x="115.0" y="82.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">本人が続けて返信を相談</text>
+  <rect x="245" y="40" width="200" height="60" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="345.0" y="61.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">2 件目: 同じ流れの返事</text>
+  <text x="345.0" y="82.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">前の会話に 1 件目が入っている</text>
+  <rect x="475" y="40" width="200" height="60" rx="8" fill="#FAECE7" stroke="#D85A30" stroke-width="0.5"/>
+  <text x="575.0" y="61.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">新しいセッション B</text>
+  <text x="575.0" y="82.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">A での相談を知らない</text>
+  <path d="M215 70 L243 70" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <path d="M445 70 L473 70" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <text x="15" y="144" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">これから</text>
+  <rect x="15" y="160" width="200" height="60" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="115.0" y="181.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">1 件目: セッション A</text>
+  <text x="115.0" y="202.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">場所と ID を控えておく</text>
+  <rect x="245" y="160" width="200" height="60" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="345.0" y="181.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">2 件目: 同じ流れの返事</text>
+  <text x="345.0" y="202.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">控えた件が前の会話にある</text>
+  <rect x="475" y="160" width="200" height="60" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="575.0" y="181.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">セッション B（続き）</text>
+  <text x="575.0" y="202.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">A の会話と相談を写して始まる</text>
+  <path d="M215 190 L243 190" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <path d="M445 190 L473 190" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <text x="340.0" y="252" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">A には書き足さない。デスクトップ版は外から足した分を読まず、本人が次に話すと記録が枝分かれする</text>
+  <text x="340.0" y="276" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">場所がまたがる回、前の会話に控えた件が無い回、A の記録が消えた回は、これまでどおり新しいセッション</text>
+</svg>

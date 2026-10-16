@@ -13,6 +13,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "pipeline"))
 
 import claude_bin  # noqa: E402
+import continuation  # noqa: E402
 import run_claude  # noqa: E402
 import tick  # noqa: E402
 from watcher import config  # noqa: E402
@@ -869,7 +870,7 @@ class ChannelDirs(Base):
     def test_triage_adds_the_folders_of_the_claimed_items(self):
         seen = []
 
-        def fake_build(claude, cfg, watcher, home, session_name="", extra_dirs=()):
+        def fake_build(claude, cfg, watcher, home, session_name="", extra_dirs=(), fork_from=""):
             seen.append(list(extra_dirs))
             return FAKE
 
@@ -892,6 +893,141 @@ class ChannelDirs(Base):
             parse(["C:/repo"])
         with self.assertRaises(config.ConfigError):
             parse({"dev": ["C:/repo"]})
+
+
+class Continuation(Base):
+    """同じ流れの続きの件は、前の仕分けの会話を写した新しいセッションで仕分ける（continuation.py、ADR-0036）。"""
+
+    def setUp(self):
+        super().setUp()
+        root = Path(self._tmp.name)
+        self.cfg = config.parse({"state_root": str(root), "keep_transcripts": True,
+                                 "watchers": [{"name": "me", "user_id": "1"}]})
+        self.watcher = self.cfg.watchers[0]
+        self.claude_dir = root / "claude-config"  # 本物の ~/.claude を見ない
+        patcher = mock.patch.dict(os.environ, {"CLAUDE_CONFIG_DIR": str(self.claude_dir)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def transcript(self, session_id="sess-fake"):
+        folder = self.claude_dir / "projects" / "C--state-me-run"
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / ("%s.jsonl" % session_id)).write_text("{}\n", encoding="utf-8")
+
+    def claim_msg(self, name, message_id, channel_id="20", before=()):
+        it = dict(item(), message_id=str(message_id), channel_id=str(channel_id),
+                  context_before=[{"author": "bob", "text": "earlier", "id": str(i)} for i in before])
+        path = self.home.claims / name
+        path.write_text(json.dumps({"items": [it]}), encoding="utf-8")
+        return path
+
+    def run_once(self, files, cfg=None):
+        """build_command に渡った名前と、続ける先を控える。claude は偽物（session_id は、いつも sess-fake）。"""
+        cfg = cfg or self.cfg
+        seen = []
+
+        def fake_build(claude, cfg, watcher, home, session_name="", extra_dirs=(), fork_from=""):
+            seen.append((session_name, fork_from))
+            return FAKE
+
+        with mock.patch.object(run_claude.claude_bin, "find_claude", return_value="CLAUDE"), \
+                mock.patch.object(run_claude, "build_command", side_effect=fake_build):
+            res = run_claude.triage(self.home, cfg.watchers[0], cfg, files, now=NOW, poster=self.poster)
+        return res, seen
+
+    def table(self):
+        return continuation.load(self.home)
+
+    def test_a_reply_in_the_same_flow_continues_from_the_previous_session(self):
+        res, seen = self.run_once([self.claim_msg("a.json", 100)])
+        self.assertEqual(seen, [("alice「SECRET-BODY please」#dev", "")])  # 初めての場所は、新しいセッション
+        self.assertEqual(self.table()["20"]["message_ids"], ["100"])
+        self.transcript()
+        res, seen = self.run_once([self.claim_msg("b.json", 200, before=[90, 100])])
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(seen, [("alice「SECRET-BODY please」#dev（続き）", "sess-fake")])
+        self.assertEqual(res["continued_from"], "sess-fake")
+        self.assertEqual(self.table()["20"]["message_ids"], ["100", "200"])  # 続けた回は、前に仕分けた ID も引き継ぐ
+        rec = next((self.home.root / "runs").glob("*-%s.json" % res["run_id"])).read_text(encoding="utf-8")
+        self.assertIn('"continued_from": "sess-fake"', rec)
+        self.assertNotIn("SECRET-BODY", rec)
+
+    def test_it_starts_a_new_session_unless_the_flow_is_the_same(self):
+        self.run_once([self.claim_msg("a.json", 100)])
+        self.transcript()
+        cases = {
+            "前の件が、前の会話に無い": [self.claim_msg("b.json", 200, before=[90])],
+            "別の場所": [self.claim_msg("c.json", 300, channel_id="21", before=[100])],
+            "場所がまたがる": [self.claim_msg("d.json", 400, before=[100]), self.claim_msg("e.json", 500, channel_id="21")],
+        }
+        for why, files in cases.items():
+            with self.subTest(why):
+                self.home.root.joinpath("sessions.json").write_text(
+                    json.dumps({"20": {"session_id": "sess-fake", "message_ids": ["100"], "at": int(time.time())}}),
+                    encoding="utf-8")
+                res, seen = self.run_once(files)
+                self.assertTrue(res["ok"], res)
+                self.assertEqual(seen[0][1], "")
+                self.assertNotIn("（続き）", seen[0][0])
+                self.assertNotIn("continued_from", res)
+
+    def test_a_deleted_previous_session_is_not_continued(self):
+        self.run_once([self.claim_msg("a.json", 100)])  # 記録のファイルを作らない（30 日で消えた、本人が消した）
+        res, seen = self.run_once([self.claim_msg("b.json", 200, before=[100])])
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(seen[0][1], "")
+
+    def test_a_failed_continued_run_is_retried_in_a_new_session(self):
+        self.run_once([self.claim_msg("a.json", 100)])
+        self.transcript()
+        os.environ["FAKE_CLAUDE_MODE"] = "fail"
+        f = self.claim_msg("b.json", 200, before=[100])
+        res, seen = self.run_once([f])
+        self.assertEqual((res["reason"], seen[0][1]), ("claude_exit_1", "sess-fake"))
+        self.assertNotIn("20", self.table())  # 続ける先が壊れていても、止まらない
+        os.environ["FAKE_CLAUDE_MODE"] = "ok"
+        res, seen = self.run_once([f])
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(seen[0][1], "")
+
+    def test_nothing_is_kept_or_continued_without_transcripts(self):
+        cfg = config.parse({"state_root": self.cfg.state_root.as_posix(), "watchers": [{"name": "me", "user_id": "1"}]})
+        self.home.root.joinpath("sessions.json").write_text(
+            json.dumps({"20": {"session_id": "sess-fake", "message_ids": ["100"], "at": int(time.time())}}), encoding="utf-8")
+        self.transcript()
+        res, seen = self.run_once([self.claim_msg("b.json", 200, before=[100])], cfg=cfg)
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(seen, [("", "")])
+
+    def test_the_command_forks_the_previous_session_and_keeps_the_same_limits(self):
+        plain = run_claude.build_command("CLAUDE", self.cfg, self.watcher, self.home)
+        cmd = run_claude.build_command("CLAUDE", self.cfg, self.watcher, self.home, fork_from="3888cecd-4303-4920")
+        self.assertEqual(cmd[cmd.index("--resume"): cmd.index("--resume") + 3], ["--resume", "3888cecd-4303-4920", "--fork-session"])
+        self.assertEqual([x for x in cmd if x not in ("--resume", "3888cecd-4303-4920", "--fork-session")], plain)
+        for bad in ("", "a b", 'a" & calc', "--bare", "x" * 65):
+            self.assertNotIn("--resume", run_claude.build_command("CLAUDE", self.cfg, self.watcher, self.home, fork_from=bad))
+        off = config.parse({"state_root": self.cfg.state_root.as_posix(), "watchers": [{"name": "me", "user_id": "1"}]})
+        self.assertNotIn("--resume", run_claude.build_command("CLAUDE", off, off.watchers[0], self.home, fork_from="abc"))
+
+    def test_the_prompt_says_it_is_a_continuation_only_when_it_is(self):
+        f = self.claim_msg("a.json", 100)
+        args = (self.watcher, [f], self.home.drafts / "d.md", self.home.root / "out" / "x.txt", NOW)
+        text = run_claude.build_prompt(*args, continued=True)
+        self.assertIn("前の会話の続き", text)
+        self.assertNotIn("{{", text)
+        self.assertNotIn("前の会話の続き", run_claude.build_prompt(*args))
+
+    def test_the_table_keeps_recent_places_only(self):
+        items = [{"channel_id": "20", "message_id": str(i)} for i in range(continuation.KEEP_IDS + 5)]
+        continuation.record(self.home, items, "s1", now=1_000_000_000)
+        self.assertEqual(len(self.table()["20"]["message_ids"]), continuation.KEEP_IDS)
+        continuation.record(self.home, [{"channel_id": "21", "message_id": "1"}], "s2",
+                            now=1_000_000_000 + continuation.KEEP_SEC + 1)
+        self.assertEqual(set(self.table()), {"21"})  # 記録が消えたころの控えは捨てる
+        continuation.record(self.home, [{"channel_id": "21", "message_id": "2"}], "s3")
+        self.assertEqual(self.table()["21"]["message_ids"], ["2"])  # 新しいセッションは、前の ID を引き継がない
+        continuation.record(self.home, [{"channel_id": "22", "message_id": "1"}], 'a" & calc')
+        self.assertNotIn("22", self.table())
 
 
 class ClaudeBin(unittest.TestCase):

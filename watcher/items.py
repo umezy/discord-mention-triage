@@ -67,6 +67,11 @@ def slim(s: Snap, user_names: dict, role_names: dict) -> dict:
     }
 
 
+def context(s: Snap, user_names: dict, role_names: dict) -> dict:
+    """前後の会話の 1 件。宛先の発言（slim）に、メッセージ ID を足したもの。前の仕分けの続きかを見分けるのに使う（pipeline/continuation.py）。"""
+    return dict(slim(s, user_names, role_names), id=str(s.id))
+
+
 def build_item(
     *,
     watcher_name: str,
@@ -101,6 +106,6 @@ def build_item(
         "pull_requests_blocked": pull_requests_blocked,
         "mention": slim(message, user_names, role_names),
         "mention_names": mention_names(message.content, user_names, role_names),
-        "context_before": [slim(s, user_names, role_names) for s in before],
-        "context_after": [slim(s, user_names, role_names) for s in after],
+        "context_before": [context(s, user_names, role_names) for s in before],
+        "context_after": [context(s, user_names, role_names) for s in after],
     }
