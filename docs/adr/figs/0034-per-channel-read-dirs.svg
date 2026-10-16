@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="300" viewBox="0 0 680 300" role="img" font-family="'Segoe UI','Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif">
+  <title>チャンネルごとに、仕分けの Claude が読むフォルダを足せるようにする</title>
+  <desc>届いた件のチャンネルの ID と、スレッドなら親の ID を、run_claude.py が設定の表（channel_read_dirs）で当て、当たったフォルダだけを claude -p の読む場所に足す。例: ID 20 の #dev には C:/work/game、ID 30 の相談フォーラムのスレッドには C:/work/docs。当たらない件は read_dirs だけ。変わらないもの: read_dirs はどの回も読める、道具は Read・Grep・Glob・Edit・Write、書けるのは drafts/ と out/ の下だけ、指示文に件の名前は入れない。</desc>
+  <defs><marker id="a-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <rect width="680" height="300" fill="#FFFFFF"/>
+  <rect x="20" y="26" width="170" height="80" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="105" y="47" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">届いた件</text>
+  <text x="105" y="68" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">チャンネルの ID</text>
+  <text x="105" y="86" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">スレッドなら、親の ID も</text>
+  <rect x="255" y="26" width="170" height="80" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="340" y="47" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">run_claude.py</text>
+  <text x="340" y="68" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">設定の表で ID を当てる</text>
+  <text x="340" y="86" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">当たったフォルダだけ選ぶ</text>
+  <rect x="490" y="26" width="170" height="80" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="575" y="47" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">claude -p</text>
+  <text x="575" y="68" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">その回だけ、読む場所に足す</text>
+  <text x="575" y="86" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">指示文に「まずここ」</text>
+  <path d="M190 66 L253 66" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <path d="M425 66 L488 66" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <rect x="20" y="128" width="310" height="156" rx="12" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="34" y="146" font-size="13" font-weight="500" fill="#534AB7" text-anchor="start" dominant-baseline="central">設定の例（channel_read_dirs）</text>
+  <text x="34" y="180" font-size="13" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">ID 20（#dev）→ C:/work/game</text>
+  <text x="34" y="214" font-size="13" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">ID 30（相談フォーラム）→ C:/work/docs</text>
+  <text x="48" y="234" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="start" dominant-baseline="central">中のスレッドの件にも当たる</text>
+  <text x="34" y="264" font-size="13" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">当たらない件 → read_dirs だけ</text>
+  <rect x="350" y="128" width="310" height="156" rx="12" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="364" y="146" font-size="13" font-weight="500" fill="#0F6E56" text-anchor="start" dominant-baseline="central">変わらないもの</text>
+  <circle cx="374" cy="178" r="9" fill="#1D9E75"/><path d="M370 178 L373 181 L378 175" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="392" y="178" font-size="13" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">read_dirs は、どの回も読める</text>
+  <circle cx="374" cy="206" r="9" fill="#1D9E75"/><path d="M370 206 L373 209 L378 203" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="392" y="206" font-size="13" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">道具: Read・Grep・Glob・Edit・Write</text>
+  <circle cx="374" cy="234" r="9" fill="#1D9E75"/><path d="M370 234 L373 237 L378 231" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="392" y="234" font-size="13" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">書ける: drafts/ と out/ の下だけ</text>
+  <circle cx="374" cy="262" r="9" fill="#1D9E75"/><path d="M370 262 L373 265 L378 259" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="392" y="262" font-size="13" font-weight="400" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">指示文に件の名前を入れない</text>
+</svg>

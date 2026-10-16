@@ -10,7 +10,7 @@
 
 Claude に与える権限は最小限:
   * 使える道具は Read / Grep / Glob / Edit / Write だけ（--tools）。Bash・ネットワーク・MCP・スキルは無し
-  * 読めるのは claims/ と、設定した read_dirs だけ（--add-dir）。.env は明示的に拒否
+  * 読めるのは claims/ と、設定した read_dirs と、届いた件の場所に当てた channel_read_dirs だけ（--add-dir）。.env は明示的に拒否
   * 書けるのは drafts/ と out/ の下だけ（Edit の許可ルール）
   * 許可が無い操作は聞かずに拒否（--permission-mode dontAsk --permission-prompts none）
   * ただし、デスクトップ版へ取り込む設定のときは、「自動」モード（auto）で動かす。取り込んだセッションは、記録に残った
@@ -68,7 +68,28 @@ def rule_path(path) -> str:
     return "/" + s if s.startswith("/") else s
 
 
-def build_command(claude: str, cfg, watcher, home, session_name: str = "") -> list:
+def expand_dir(d) -> str:
+    return str(Path(os.path.expandvars(os.path.expanduser(d))))
+
+
+def channel_dirs(watcher, files) -> list:
+    """届いた件に当たる、場所ごとのフォルダ（channel_read_dirs）。[(ID, (フォルダ, ...)), ...]。
+    件のチャンネルと、スレッドの親の、どちらの ID でも当てる。"""
+    table = dict(watcher.channel_read_dirs)
+    hit = []
+    for f in files:
+        for item in tick.read_items(Path(f)):
+            for key in ("channel_id", "thread_parent_id"):
+                try:
+                    cid = int(item.get(key) or 0)
+                except (TypeError, ValueError):
+                    continue
+                if cid in table and cid not in hit:
+                    hit.append(cid)
+    return [(cid, tuple(expand_dir(d) for d in table[cid])) for cid in hit]
+
+
+def build_command(claude: str, cfg, watcher, home, session_name: str = "", extra_dirs=()) -> list:
     """claude -p の引数。長い日本語の指示は引数に載せず、標準入力で渡す（Windows の引数は日本語が壊れる）。
 
     session_name は、記録を残すときだけ付ける。デスクトップ版の左側で、誰の、何の件かが分かるようにする（session_naming.py）。
@@ -76,7 +97,8 @@ def build_command(claude: str, cfg, watcher, home, session_name: str = "") -> li
     名前は、引数でしか渡せない。短い日本語は、この経路（Python → claude.cmd → claude.exe）では壊れなかった（2026-10-10 の実測）。
 
     モードは、デスクトップ版へ取り込む設定のときだけ "auto"（ADR-0033）。デスクトップ版は、取り込んだセッションを、記録に残った
-    モードで開く。`claude --desktop --resume` には、ほかの指定を一緒に渡せない（2026-10-16 に確かめた）。"""
+    モードで開く。`claude --desktop --resume` には、ほかの指定を一緒に渡せない（2026-10-16 に確かめた）。
+    extra_dirs は、この回の件の場所に当てたフォルダ（channel_dirs）。read_dirs と同じく、読むためだけに足す。"""
     cmd = [
         claude, "-p", "Follow the task written on stdin.",
         "--model", watcher.triage_model,
@@ -90,8 +112,8 @@ def build_command(claude: str, cfg, watcher, home, session_name: str = "") -> li
         "--disallowedTools", "Read(//**/.env)", "Read(//**/*.env)",
         "--add-dir", str(home.claims),
     ]
-    for d in watcher.read_dirs:
-        cmd += ["--add-dir", str(Path(os.path.expandvars(os.path.expanduser(d))))]
+    for d in dict.fromkeys(expand_dir(x) for x in (*watcher.read_dirs, *extra_dirs)):
+        cmd += ["--add-dir", d]
     cmd += [
         "--strict-mcp-config",
         "--disable-slash-commands",
@@ -248,6 +270,16 @@ def has_pr(files) -> bool:
     return False
 
 
+def dirs_note(located) -> str:
+    """場所ごとのフォルダを、指示文に書く。届いた件の名前は書かない（スレッド名は誰でも付けられるので、指示文に混ぜない）。"""
+    if not located:
+        return ""
+    lines = ["**場所ごとのフォルダ**: 次の ID のチャンネル（`channel_id` か `thread_parent_id` が一致する件）は、"
+             "事実の裏取りに、まず右のフォルダを読んでください（読み取りのみ）。"]
+    lines += ["- %s: %s" % (cid, "、".join(dirs)) for cid, dirs in located]
+    return "\n".join(lines)
+
+
 def build_prompt(watcher, files, drafts_file: Path, digest_file: Path, now: datetime) -> str:
     text = PROMPT_PATH.read_text(encoding="utf-8")
     subs = {
@@ -257,6 +289,7 @@ def build_prompt(watcher, files, drafts_file: Path, digest_file: Path, now: date
         "{{DRAFTS_FILE}}": p(drafts_file),
         "{{DIGEST_FILE}}": p(digest_file),
         "{{PR_NOTE}}": PR_NOTE if has_pr(files) else "",
+        "{{DIRS_NOTE}}": dirs_note(channel_dirs(watcher, files)),
     }
     for k, v in subs.items():
         text = text.replace(k, v)
@@ -403,7 +436,8 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
             if not claude:
                 return finish_failure(home, files, summary, "claude_not_found", poster, started)
             name = session_name_for(files) if cfg.keep_transcripts else ""
-            command = build_command(claude, cfg, watcher, home, session_name=name)
+            extra = [d for _, dirs in channel_dirs(watcher, files) for d in dirs]
+            command = build_command(claude, cfg, watcher, home, session_name=name, extra_dirs=extra)
         prompt = build_prompt(watcher, files, drafts_file, digest_file, now)
         env = child_env(home)
         summary["auth"] = auth_source(env)

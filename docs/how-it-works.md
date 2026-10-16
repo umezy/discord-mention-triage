@@ -54,7 +54,7 @@ claude -p "Follow the task written on stdin." --model opus --effort xhigh
   --tools "Read,Grep,Glob,Edit,Write"
   --allowedTools "Edit(//c/…/drafts/**)" "Edit(//c/…/out/**)"
   --disallowedTools "Read(//**/.env)" "Read(//**/*.env)"
-  --add-dir <claims> [--add-dir <read_dirs>…]
+  --add-dir <claims> [--add-dir <read_dirs と、その回の件の場所に当てた channel_read_dirs>…]
   --strict-mcp-config --disable-slash-commands --setting-sources project,local
   --output-format json --no-session-persistence
 ```

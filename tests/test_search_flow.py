@@ -80,6 +80,7 @@ class BasicFlow(Base):
         self.assertEqual(item["message_id"], str(mid))
         self.assertEqual((item["kind"], item["direct"], item["watcher"]), ("direct", True, "me"))
         self.assertEqual((item["guild_name"], item["channel_name"], item["thread_parent"]), ("Example", "dev", None))
+        self.assertIsNone(item["thread_parent_id"])
         self.assertEqual(item["jump_url"], "https://discord.com/channels/1/%d/%d" % (DEV, mid))
         self.assertEqual(item["mention"]["text"], "@たろう これ確認お願いします")  # <@111> は表示名に置き換わる
         self.assertEqual(item["mention"]["author"], "アリス（開発）")  # サーバー内の名前
@@ -211,6 +212,7 @@ class Threads(Base):
         self.assertEqual(self.poll().emitted, 1)
         (item,) = self.inbox_items()
         self.assertEqual((item["channel_name"], item["thread_parent"]), ("困りごと", "相談フォーラム"))
+        self.assertEqual(item["thread_parent_id"], str(FORUM))  # 場所ごとのフォルダを、親の ID でも当てる
 
     def test_blocking_the_parent_blocks_its_threads(self):
         self.started()

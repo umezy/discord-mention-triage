@@ -297,6 +297,7 @@ class Poller:
             channel_id=cid,
             channel_name=ch.get("name") or str(cid),
             parent_name=parent.get("name") if parent else None,
+            parent_id=int(ch["parent_id"]) if parent else None,
             message=self._snap(msg, user_names),
             before=[self._snap(x, user_names) for x in before],
             after=[self._snap(x, user_names) for x in after],

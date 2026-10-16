@@ -709,6 +709,88 @@ class Prompt(Base):
         self.assertEqual((err["cost"], err["api_error"]), (0, "403 oauth_not_allowed_for_organization"))
 
 
+class ChannelDirs(Base):
+    """場所ごとのフォルダ（channel_read_dirs）。その場所の件が来た回だけ読む場所に足し、指示文で ID とフォルダを示す。"""
+
+    def setUp(self):
+        super().setUp()
+        root = Path(self._tmp.name)
+        self.game, self.docs, self.repo = (str(root / n) for n in ("game", "docs", "repo"))
+        self.cfg = config.parse({
+            "state_root": str(root),
+            "watchers": [{"name": "me", "user_id": "1", "read_dirs": [self.repo],
+                          "channel_read_dirs": {"20": [self.game], "30": self.docs}}],
+        })
+        self.watcher = self.cfg.watchers[0]
+
+    def claim_at(self, name, channel_id, parent_id=None):
+        it = dict(item(), channel_id=str(channel_id), thread_parent_id=str(parent_id) if parent_id else None,
+                  channel_name="誰でも付けられるスレッド名")
+        path = self.home.claims / name
+        path.write_text(json.dumps({"items": [it]}), encoding="utf-8")
+        return path
+
+    def test_the_channel_or_its_thread_parent_picks_the_folders(self):
+        self.assertEqual(run_claude.channel_dirs(self.watcher, [self.claim_at("a.json", 20)]), [(20, (self.game,))])
+        self.assertEqual(run_claude.channel_dirs(self.watcher, [self.claim_at("b.json", 99, parent_id=30)]), [(30, (self.docs,))])
+        self.assertEqual(run_claude.channel_dirs(self.watcher, [self.claim_at("c.json", 99)]), [])
+        old = self.home.claims / "d.json"  # thread_parent_id を持たない、前の形の件
+        old.write_text(json.dumps({"items": [dict(item(), channel_id="20")]}), encoding="utf-8")
+        self.assertEqual(run_claude.channel_dirs(self.watcher, [old]), [(20, (self.game,))])
+
+    def test_the_folders_are_added_to_read_dirs_for_that_run_only(self):
+        def dirs(c):
+            return [c[i + 1] for i, x in enumerate(c) if x == "--add-dir"]
+
+        claims = str(self.home.claims)
+        plain = run_claude.build_command("CLAUDE", self.cfg, self.watcher, self.home)
+        self.assertEqual(dirs(plain), [claims, self.repo])
+        extra = run_claude.build_command("CLAUDE", self.cfg, self.watcher, self.home, extra_dirs=[self.game, self.repo])
+        self.assertEqual(dirs(extra), [claims, self.repo, self.game])  # 同じフォルダは 1 回だけ
+        self.assertEqual(extra[extra.index("--tools") + 1], "Read,Grep,Glob,Edit,Write")  # 道具と書き込み先は変わらない
+        self.assertEqual(extra[extra.index("--allowedTools"): extra.index("--disallowedTools")],
+                         plain[plain.index("--allowedTools"): plain.index("--disallowedTools")])
+
+    def test_the_prompt_names_the_id_and_folder_but_not_the_thread_name(self):
+        text = run_claude.build_prompt(self.watcher, [self.claim_at("a.json", 20)], self.home.drafts / "d.md",
+                                       self.home.root / "out" / "x.txt", NOW)
+        self.assertIn("場所ごとのフォルダ", text)
+        self.assertIn("- 20: " + self.game, text)
+        self.assertNotIn(self.docs, text)
+        self.assertNotIn("誰でも付けられるスレッド名", text)  # スレッド名は誰でも付けられるので、指示文に混ぜない
+        self.assertNotIn("{{", text)
+        text = run_claude.build_prompt(self.watcher, [self.claim_at("b.json", 99)], self.home.drafts / "d.md",
+                                       self.home.root / "out" / "x.txt", NOW)
+        self.assertNotIn("場所ごとのフォルダ", text)
+
+    def test_triage_adds_the_folders_of_the_claimed_items(self):
+        seen = []
+
+        def fake_build(claude, cfg, watcher, home, session_name="", extra_dirs=()):
+            seen.append(list(extra_dirs))
+            return FAKE
+
+        with mock.patch.object(run_claude.claude_bin, "find_claude", return_value="CLAUDE"), \
+                mock.patch.object(run_claude, "build_command", side_effect=fake_build):
+            res = run_claude.triage(self.home, self.watcher, self.cfg, [self.claim_at("a.json", 99, parent_id=30)],
+                                    now=NOW, poster=self.poster)
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(seen, [[self.docs]])
+
+    def test_config_shapes(self):
+        def parse(value):
+            return config.parse({"state_root": self.cfg.state_root.as_posix(),
+                                 "watchers": [{"name": "me", "user_id": "1", "channel_read_dirs": value}]}).watchers[0]
+
+        self.assertEqual(self.watcher.channel_read_dirs, ((20, (self.game,)), (30, (self.docs,))))  # 1 つなら文字列でもよい
+        self.assertEqual(parse(None).channel_read_dirs, ())
+        self.assertEqual(parse({}).channel_read_dirs, ())
+        with self.assertRaises(config.ConfigError):
+            parse(["C:/repo"])
+        with self.assertRaises(config.ConfigError):
+            parse({"dev": ["C:/repo"]})
+
+
 class ClaudeBin(unittest.TestCase):
     def test_priority_and_version_sorting(self):
         with tempfile.TemporaryDirectory() as d:

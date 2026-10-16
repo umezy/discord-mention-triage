@@ -76,6 +76,7 @@ def build_item(
     channel_id: int,
     channel_name: str,
     parent_name: str | None,
+    parent_id: int | None = None,
     message: Snap,
     before: list,
     after: list,
@@ -91,6 +92,7 @@ def build_item(
         "channel_id": str(channel_id),
         "channel_name": channel_name,
         "thread_parent": parent_name,
+        "thread_parent_id": str(parent_id) if parent_id else None,  # 場所ごとのフォルダ（channel_read_dirs）を、親の ID でも当てる
         "guild_id": str(guild_id),
         "guild_name": guild_name,
         "jump_url": jump_url(guild_id, channel_id, message.id),

@@ -22,6 +22,7 @@
 | [0031](0031-stay-on-subscription-not-api-credits.md) | 無人実行はサブスクの利用枠で動かし、Max / Team の月額 API クレジットには切り替えない | accepted | 2026-10-12 |
 | [0032](0032-run-on-your-own-pc.md) | 仕分けは、Claude Code が入った自分の PC で動かす。PC の外で動かす形は、オプションとしても入れない | accepted | 2026-10-12 |
 | [0033](0033-auto-mode-when-importing.md) | デスクトップ版へ取り込む設定のときは、仕分けを「自動」モードで動かす | accepted | 2026-10-16 |
+| [0034](0034-per-channel-read-dirs.md) | チャンネルごとに、仕分けの Claude が読むフォルダを足せるようにする | accepted | 2026-10-16 |
 
 「一部を変更」は、どこが変わったかを、その ADR の補足に書いている。番号が飛んでいるのは、システムの作り以外の記録を、公開版に含めていないため。
 

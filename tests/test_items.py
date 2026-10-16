@@ -70,6 +70,10 @@ class BuildItem(unittest.TestCase):
         for k in ("message_id", "channel_id", "guild_id"):
             self.assertIsInstance(item[k], str)
 
+    def test_the_thread_parent_id_is_a_string_or_none(self):
+        self.assertIsNone(self.build()["thread_parent_id"])
+        self.assertEqual(self.build(parent_name="forum", parent_id=5)["thread_parent_id"], "5")
+
     def test_role_kind_is_not_direct(self):
         self.assertFalse(self.build(kind="role")["direct"])
 

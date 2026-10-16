@@ -68,6 +68,7 @@ notepad $env:TEMP\claude-install.ps1
 | 項目 | 意味 |
 |---|---|
 | `watchers[].read_dirs` | 事実確認のために、Claude が読んでよい手元のフォルダ（読み取りのみ） |
+| `watchers[].channel_read_dirs` | チャンネルごとに足すフォルダ。`{"チャンネルの ID": ["フォルダ"]}` と書く。ID はスレッドの親（フォーラムなど）でもよく、その中のスレッドの件にも当たる。その場所の件が来た回だけ読めて、Claude はまずそこで確かめる。1 回の仕分けにほかの場所の件が混ざると、その回は混ざった分も読める（[ADR-0034](adr/0034-per-channel-read-dirs.md)） |
 | `watchers[].triage_model` / `triage_effort` | 仕分けに使うモデルと effort（既定 `opus` / `xhigh`）。利用枠に当たりやすいなら軽くする |
 | `watchers[].pr_policy` | PR の URL を、条件を満たした依頼と、満たさなかった依頼に分ける条件。PR の自動レビューは無効で、有効にする設定は無い（`pr_auto_review: true` と書くと、読み込みで止まる） |
 | `claude_bin` | `claude` の場所。空なら、PATH、デスクトップ版に同梱の最新版、の順で探す |

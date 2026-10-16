@@ -41,6 +41,8 @@ class WatchedUser:
     pr_policy: PrPolicy = field(default_factory=PrPolicy)
     # --- 仕分けを動かす Claude（pipeline/run_claude.py が使う） ---
     read_dirs: tuple = ()  # 事実確認のために Claude が読んでよい手元のリポジトリ（読み取りのみ）
+    # ((チャンネルの ID, (フォルダ, ...)), ...)。その場所の件が来た回だけ、read_dirs に足す。ID は、スレッドの親でもよい
+    channel_read_dirs: tuple = ()
     triage_model: str = "opus"
     triage_effort: str = "xhigh"
 
@@ -78,6 +80,22 @@ def _choice(value, what: str) -> str:
     if not MODEL_RE.match(v):
         raise ConfigError(f"{what} に使えない文字がある: {v!r}")
     return v
+
+
+def _channel_dirs(value, name: str) -> tuple:
+    """{"チャンネルの ID": ["フォルダ", ...]} を、((ID, (フォルダ, ...)), ...) にする。フォルダが 1 つなら、文字列でもよい。"""
+    if not value:
+        return ()
+    if not isinstance(value, dict):
+        raise ConfigError(f'watchers[{name}].channel_read_dirs は {{"チャンネルの ID": ["フォルダ", ...]}} の形で書く')
+    out = []
+    for cid, dirs in value.items():
+        try:
+            cid = int(cid)
+        except (TypeError, ValueError):
+            raise ConfigError(f"watchers[{name}].channel_read_dirs に数値でない ID がある: {cid!r}") from None
+        out.append((cid, (str(dirs),) if isinstance(dirs, str) else tuple(str(d) for d in dirs or [])))
+    return tuple(out)
 
 
 def _expand(p: str) -> Path:
@@ -157,6 +175,7 @@ def parse(data: dict, path: Path | None = None) -> Config:
                 include_everyone=bool(w.get("include_everyone", False)),
                 pr_policy=policy,
                 read_dirs=tuple(str(d) for d in w.get("read_dirs", [])),
+                channel_read_dirs=_channel_dirs(w.get("channel_read_dirs"), name),
                 triage_model=_choice(w.get("triage_model", "opus"), "triage_model"),
                 triage_effort=_choice(w.get("triage_effort", "xhigh"), "triage_effort"),
             )
