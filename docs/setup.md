@@ -63,7 +63,7 @@ notepad $env:TEMP\claude-install.ps1
 
 ## 設定
 
-設定は `%USERPROFILE%\.discord-mention-triage\config.json`。`init` が作り、あとから直すときはメモ帳で開く。全項目は `config/config.example.json`。
+設定は `%USERPROFILE%\.discord-mention-triage\config.json`。`init` が作り、あとから直すときはメモ帳で開く（読ませるフォルダを変えるだけなら、Claude Code で「このフォルダも読ませて」と頼めば、スキルが書き換える）。全項目は `config/config.example.json`。
 
 | 項目 | 意味 |
 |---|---|
