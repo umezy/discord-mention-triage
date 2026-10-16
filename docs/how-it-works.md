@@ -50,7 +50,7 @@ Discord へ出す要求は、すべて GET。1 件ごとの取得に失敗した
 
 ```
 claude -p "Follow the task written on stdin." --model opus --effort xhigh
-  --permission-mode dontAsk --permission-prompts none
+  --permission-mode dontAsk --permission-prompts none   （desktop_import: true のときは auto）
   --tools "Read,Grep,Glob,Edit,Write"
   --allowedTools "Edit(//c/…/drafts/**)" "Edit(//c/…/out/**)"
   --disallowedTools "Read(//**/.env)" "Read(//**/*.env)"
@@ -82,6 +82,7 @@ claude -p "Follow the task written on stdin." --model opus --effort xhigh
     NUL やログファイルなので、Windows では**非表示の本物のコンソールを新しく作って**その中で呼ぶ（`CREATE_NEW_CONSOLE` ＋ `SW_HIDE`）。
   - `conhost --headless` は使わない。入出力が NUL やファイルだと、**中身を起動せずに成功（0）を返し**、終了コードも返さないため。
     （起動のたびの黒い画面を消すためのタスク登録では、タスクスケジューラが渡す入出力で動くので、引き続き使っている。）
+  - 取り込んだセッションは、**記録に残ったモードで開く**（`claude --desktop --resume` には、モードを渡せない）。そこで、取り込む設定のときは、仕分けを**「自動」モード**（`--permission-mode auto`）で動かし、続きを頼んでも断られないようにしている（[ADR-0033](adr/0033-auto-mode-when-importing.md)）。
   - 取り込んだセッションの **Remote Control は、自動では ON にならない**（デスクトップ版の「新しいセッションを Remote Control に
     接続する」設定は、デスクトップ版で始めたセッションにだけ効く。`claude -p --remote-control` も、取り込み後は OFF だった）。
     使いたい回だけ、デスクトップ版のツールバーのスイッチ（または `/remote-control`）で ON にする。

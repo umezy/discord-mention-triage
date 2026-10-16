@@ -74,7 +74,7 @@ notepad $env:TEMP\claude-install.ps1
 | `search_overlap_minutes` | 検索を、前回の続きより何分手前から重ねて引くか（既定 30）。検索の索引の遅れを吸収する |
 | `catchup_max_age_hours` | PC が止まっていた間の分を、どこまでさかのぼって拾うか（既定 72） |
 | `keep_transcripts` | `true` で、Claude のセッション記録（本文を含む）を `~/.claude/projects/` に残す（雛形は `true`。コードの既定は、設定を忘れても本文が残らないよう `false`）。記録は 30 日で自動削除される。開くときは、実行記録（`runs/`）の `session_id` を使い、`claude --resume <ID>` |
-| `desktop_import` | `true` で、仕分けのたびに、そのセッションをデスクトップ版の左側の一覧へ取り込む（`keep_transcripts: true` が前提。雛形は `false`）。名前は `<送り主>「<用件の頭>」#<場所> ほかN件`（[しくみ](how-it-works.md)）。取り込みに失敗しても、仕分けは成功のまま |
+| `desktop_import` | `true` で、仕分けのたびに、そのセッションをデスクトップ版の左側の一覧へ取り込む（`keep_transcripts: true` が前提。雛形は `false`）。名前は `<送り主>「<用件の頭>」#<場所> ほかN件`（[しくみ](how-it-works.md)）。取り込みに失敗しても、仕分けは成功のまま。`true` のときは、仕分けを「自動」モードで動かす（取り込んだセッションが「自動」で開く。[ADR-0033](adr/0033-auto-mode-when-importing.md)） |
 
 鍵は、リポジトリの外の 2 つのファイルに置く（`config.py` は、リポジトリの中を指す設定を拒否する）。メモ帳で「UTF-8（BOM 付き）」で保存しても読める。
 

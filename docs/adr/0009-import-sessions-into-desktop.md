@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-04
-amended-by: [ADR-0015]
+amended-by: [ADR-0015, ADR-0033]
 ---
 
 # ADR-0009: 仕分けのたびに、セッションをデスクトップ版へ取り込む
@@ -46,5 +46,6 @@ amended-by: [ADR-0015]
 
 - 一部を変えた ADR:
   - [ADR-0015](0015-one-command-one-folder.md): 既定は、取り込まない。取り込みの機能は、そのまま
+  - [ADR-0033](0033-auto-mode-when-importing.md): 取り込んだセッションは、記録に残ったモードで開く、と確かめた。取り込む設定のときは、仕分けを「自動」モードで動かし、取り込んだセッションも「自動」で開くようにした
 - その後変わった所: セッションの名前に、本文の頭も入れるようにした。いまの形と、通す文字の決め方は、[しくみ](../how-it-works.md) と [security.md](../security.md#プロンプトインジェクション)
 - 関連: [しくみ](../how-it-works.md)、[security.md](../security.md)、[ADR-0008](0008-keep-session-transcripts.md)

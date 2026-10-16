@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import os
 import sys
@@ -91,3 +92,9 @@ class CheckClaude(Base):
         for flag in ("--tools", "--permission-mode", "--permission-prompts", "--setting-sources", "--allowedTools"):
             self.assertEqual(chk[chk.index(flag) + 1], prod[prod.index(flag) + 1], flag)
         self.assertEqual(chk[:3], prod[:3])
+        # 取り込む設定（自動モード。ADR-0033）でも、確認は本番と同じモードで動く
+        imp = dataclasses.replace(keep, desktop_import=True)
+        prod = run_claude.build_command("CLAUDE", imp, imp.watchers[0], self.home)
+        chk = check_claude.check_command("CLAUDE", imp, imp.watchers[0], self.home)
+        self.assertEqual(chk[chk.index("--permission-mode") + 1], "auto")
+        self.assertEqual(chk[chk.index("--permission-mode") + 1], prod[prod.index("--permission-mode") + 1])

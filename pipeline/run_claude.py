@@ -13,6 +13,9 @@ Claude に与える権限は最小限:
   * 読めるのは claims/ と、設定した read_dirs だけ（--add-dir）。.env は明示的に拒否
   * 書けるのは drafts/ と out/ の下だけ（Edit の許可ルール）
   * 許可が無い操作は聞かずに拒否（--permission-mode dontAsk --permission-prompts none）
+  * ただし、デスクトップ版へ取り込む設定のときは、「自動」モード（auto）で動かす。取り込んだセッションは、記録に残った
+    モードで開くので、続きを話すときに断られないように（ADR-0033）。このときは、上の範囲の外の読み書きを、断らずに、
+    自動モードの判定に任せる。道具・許可ルール・.env の拒否は同じ
 Webhook URL は Claude には渡さない。投稿はこのスクリプトが行う。
 
 注意: --bare は付けない。付けるとサブスクのログインを使わず、API キーが必要になる。
@@ -70,12 +73,15 @@ def build_command(claude: str, cfg, watcher, home, session_name: str = "") -> li
 
     session_name は、記録を残すときだけ付ける。デスクトップ版の左側で、誰の、何の件かが分かるようにする（session_naming.py）。
     誰でも書ける文字列が入るので、決めた文字だけの名前でなければ、付けない（claude.cmd のときは、引数が cmd.exe を通る）。
-    名前は、引数でしか渡せない。短い日本語は、この経路（Python → claude.cmd → claude.exe）では壊れなかった（2026-10-10 の実測）。"""
+    名前は、引数でしか渡せない。短い日本語は、この経路（Python → claude.cmd → claude.exe）では壊れなかった（2026-10-10 の実測）。
+
+    モードは、デスクトップ版へ取り込む設定のときだけ "auto"（ADR-0033）。デスクトップ版は、取り込んだセッションを、記録に残った
+    モードで開く。`claude --desktop --resume` には、ほかの指定を一緒に渡せない（2026-10-16 に確かめた）。"""
     cmd = [
         claude, "-p", "Follow the task written on stdin.",
         "--model", watcher.triage_model,
         "--effort", watcher.triage_effort,
-        "--permission-mode", "dontAsk",
+        "--permission-mode", "auto" if cfg.desktop_import else "dontAsk",
         "--permission-prompts", "none",
         "--tools", "Read,Grep,Glob,Edit,Write",
         "--allowedTools",

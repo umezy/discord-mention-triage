@@ -469,6 +469,15 @@ class Command(Base):
         self.assertNotIn("--bare", c)  # --bare はサブスクのログインを使わない
         self.assertEqual(c[c.index("--permission-mode") + 1], "dontAsk")
         self.assertEqual(c[c.index("--permission-prompts") + 1], "none")
+        # 取り込む設定のときだけ、自動モード（ADR-0033）。それ以外の絞り方は同じ
+        imp = self.cmd(keep_transcripts=True, desktop_import=True)
+        self.assertEqual(imp[imp.index("--permission-mode") + 1], "auto")
+        self.assertEqual(self.cmd(keep_transcripts=True)[imp.index("--permission-mode") + 1], "dontAsk")
+        for flag in ("--permission-prompts", "--tools", "--allowedTools", "--disallowedTools", "--setting-sources"):
+            self.assertEqual(imp[imp.index(flag) + 1], c[c.index(flag) + 1], flag)
+        self.assertEqual(imp[imp.index("--allowedTools"):imp.index("--add-dir")], c[c.index("--allowedTools"):c.index("--add-dir")])
+        self.assertIn("--strict-mcp-config", imp)
+        self.assertIn("--disable-slash-commands", imp)
         tools = c[c.index("--tools") + 1]
         self.assertEqual(set(tools.split(",")), {"Read", "Grep", "Glob", "Edit", "Write"})
         for banned in ("Bash", "PowerShell", "WebFetch", "WebSearch", "Agent", "Skill"):
