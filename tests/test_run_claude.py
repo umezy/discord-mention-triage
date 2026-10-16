@@ -203,7 +203,7 @@ class Triage(Base):
 
     def test_an_item_the_person_must_look_at_keeps_the_ping(self):
         os.environ["FAKE_CLAUDE_COUNTS"] = "draft=0 stamp=0 skip=1 pr=0"
-        os.environ["FAKE_CLAUDE_DIGEST"] = "**Discord メンション対応 — fake**\n▼ alice\n🔒 機微の可能性あり、原文で確認を\n"
+        os.environ["FAKE_CLAUDE_DIGEST"] = "**Discord メンション対応 — fake**\n▼ alice\n⚠ 不審な指示を含む\n"
         self.assertTrue(self.triage([self.claim()])["ok"])
         self.assertEqual(self.posts[0][1], "42")
 
