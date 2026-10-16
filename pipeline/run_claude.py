@@ -426,17 +426,18 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
         session_id = str(meta.get("session_id") or "")
         if session_id:
             summary["session_id"] = session_id
+        name = str(meta.get("session_name") or "")  # 古い形の控えには無い（そのときは名前の 1 通を送らない）
         summary["counts"] = meta.get("counts")  # 通知するかどうかの判定に使う。古い形の控えには無い（そのときは通知する）
         summary["reason"] = "reused_digest"
     else:
         drafts_file = home.drafts / f"{now.astimezone(JST):%Y%m%d-%H%M%S}-{rid}.md"
         for f in (digest_file, drafts_file):
             f.unlink(missing_ok=True)
+        name = session_name_for(files) if cfg.keep_transcripts else ""
         if command is None:
             claude = claude_bin.find_claude(cfg.claude_bin)
             if not claude:
                 return finish_failure(home, files, summary, "claude_not_found", poster, started)
-            name = session_name_for(files) if cfg.keep_transcripts else ""
             extra = [d for _, dirs in channel_dirs(watcher, files) for d in dirs]
             command = build_command(claude, cfg, watcher, home, session_name=name, extra_dirs=extra)
         prompt = build_prompt(watcher, files, drafts_file, digest_file, now)
@@ -467,8 +468,8 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
             return finish_failure(home, files, summary, "no_digest", poster, started)
         if not drafts_file.exists():
             return finish_failure(home, files, summary, "no_drafts", poster, started)
-        meta_file.write_text(json.dumps({"drafts_file": str(drafts_file), "session_id": session_id, "counts": info["counts"]}),
-                             encoding="utf-8")
+        meta_file.write_text(json.dumps({"drafts_file": str(drafts_file), "session_id": session_id, "session_name": name,
+                                         "counts": info["counts"]}), encoding="utf-8")
 
     body = digest_file.read_text(encoding="utf-8")
     ok, line = notify.send(home, body, mention=needs_mention(summary["counts"], body), poster=poster)
@@ -489,6 +490,11 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
     for reason in BLOCKS:
         home.clear_alert(reason)
     summary.update(ok=True, reason=summary["reason"] or "done", post=line)
+    if cfg.desktop_import and cfg.keep_transcripts and session_id and session_naming.safe(name):
+        # 取り込むセッションの名前だけを、もう 1 通送る（通知は付けない）。長押しでそのまま写せるので、出先から「この件の続き」と
+        # 頼むときに、どのセッションかを正確に言える。失敗しても仕分けは成功のまま。名前には本文の頭が入るので、記録には結果だけ書く
+        sent, name_line = notify.send(home, name, mention=False, poster=poster)
+        summary["name_post"] = "ok" if sent else name_line
     if cfg.desktop_import and cfg.keep_transcripts and session_id:
         # 投稿のあと、成功した回だけ。結果は記録に残すが、失敗しても仕分けの成否には影響させない。
         # 取り込むと、デスクトップ版の表示がそのセッションへ移るので、見ていたセッションへ戻す（ADR-0035）

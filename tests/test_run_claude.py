@@ -554,12 +554,12 @@ class DesktopImport(Base):
         calls = []
 
         def fake_import(claude, session_id, home, env=None):
-            calls.append((session_id, len(self.posts)))  # 呼ばれた時点で、投稿は済んでいる
+            calls.append((session_id, len(self.posts)))  # 呼ばれた時点で、投稿（結果と、名前の 1 通）は済んでいる
             return "ok"
 
         res = self.run_triage(self.keep_cfg(), fake_import)
         self.assertTrue(res["ok"], res)
-        self.assertEqual(calls, [("sess-fake", 1)])
+        self.assertEqual(calls, [("sess-fake", 2)])
         self.assertEqual(res["desktop_import"], "ok")
         rec = json.loads(next((self.home.root / "runs").glob("*.json")).read_text(encoding="utf-8"))
         self.assertEqual((rec["session_id"], rec["desktop_import"]), ("sess-fake", "ok"))
@@ -607,6 +607,54 @@ class DesktopImport(Base):
                                 import_fn=lambda *a, **k: calls.append(a) or "ok", view=self.view)
         self.assertEqual(res["reason"], "reused_digest")
         self.assertEqual([c[1] for c in calls], ["sess-fake"])  # 記録しておいた session_id で取り込む
+
+    def test_the_session_name_follows_the_digest_as_its_own_message(self):
+        # 名前だけの 1 通にする。長押しで写すと、名前がそのまま取れる（ほかの場所で「この件の続き」と頼むときに使う）
+        res = self.run_triage(self.keep_cfg(), lambda *a, **k: "ok")
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(len(self.posts), 2)
+        self.assertEqual(self.posts[0][1], "42")
+        self.assertEqual(self.posts[1], ("alice「SECRET-BODY please」#dev", ""))  # 通知は付けない
+        self.assertEqual(res["name_post"], "ok")
+        rec = (self.home.root / "runs").glob("*.json")
+        self.assertNotIn("SECRET-BODY", next(rec).read_text(encoding="utf-8"))  # 名前には本文の頭が入る。記録には書かない
+
+    def test_no_name_message_unless_the_session_is_imported(self):
+        for kw in ({"desktop_import": False}, {"keep_transcripts": False}):
+            self.posts.clear()
+            res = self.run_triage(self.keep_cfg(**kw), lambda *a, **k: "ok", name="pending-%s.json" % next(iter(kw)))
+            self.assertTrue(res["ok"], res)
+            self.assertEqual(len(self.posts), 1, kw)
+            self.assertNotIn("name_post", res)
+
+    def test_a_failed_name_message_does_not_fail_the_triage(self):
+        def poster(url, content, mention):
+            if self.posts:
+                raise OSError("down")
+            self.posts.append((content, mention))
+            return 204
+
+        calls = []
+        cfg = self.keep_cfg()
+        res = run_claude.triage(self.home, cfg.watchers[0], cfg, [self.claim("pending-f.json")], command=FAKE, now=NOW,
+                                poster=poster, import_fn=lambda *a, **k: calls.append(a) or "ok", view=self.view)
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(res["name_post"], "ERROR=network chunk=1 detail=OSError")
+        self.assertTrue((self.home.processed / "pending-f.json").exists())
+        self.assertEqual(len(calls), 1)  # 取り込みは続ける
+
+    def test_a_reposted_digest_still_sends_the_name(self):
+        cfg = self.keep_cfg()
+        f = self.claim("pending-p.json")
+        self.post_fails = True
+        self.assertEqual(run_claude.triage(self.home, cfg.watchers[0], cfg, [f], command=FAKE, now=NOW, poster=self.poster,
+                                           import_fn=lambda *a, **k: "ok", view=self.view)["reason"], "post_failed")
+        self.post_fails = False
+        os.environ["FAKE_CLAUDE_MODE"] = "fail"  # Claude は動かさない。名前は、控えから読む
+        res = run_claude.triage(self.home, cfg.watchers[0], cfg, [f], command=FAKE, now=NOW, poster=self.poster,
+                                import_fn=lambda *a, **k: "ok", view=self.view)
+        self.assertEqual((res["reason"], res["name_post"]), ("reused_digest", "ok"))
+        self.assertEqual(self.posts[1][0], "alice「SECRET-BODY please」#dev")
 
     def test_returns_to_the_session_that_was_being_viewed(self):
         # 取り込むと、デスクトップ版の表示がそのセッションへ移る。取り込む前に見ていたセッションを控えて、そこへ戻す
