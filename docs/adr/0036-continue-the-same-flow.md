@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-16
+amended-by: [ADR-0038]
 ---
 
 # ADR-0036: 同じ流れの続きのメンションは、前の仕分けの会話を写したセッションで仕分ける
@@ -53,6 +54,8 @@ date: 2026-10-16
 
 ## 補足
 
+- 一部を変えた ADR:
+  - [ADR-0038](0038-add-to-the-same-session.md): 前のセッションを、いま動いている Claude Code が開いていなければ、写さずに、そのセッションに書き足すようにした。10/16 の枝分かれは、デスクトップ版の裏の処理が動いている間に書き足したためと分かった
 - この ADR が一部を変えた ADR:
   - [ADR-0009](0009-import-sessions-into-desktop.md): 「メンションごとに、左側に 1 件ずつ並ぶ」は変わらないが、同じ流れの続きは、前のセッションの会話を写したセッションになる
 - 関連: [しくみ](../how-it-works.md)、[security.md](../security.md#プロンプトインジェクション)、`pipeline/continuation.py`

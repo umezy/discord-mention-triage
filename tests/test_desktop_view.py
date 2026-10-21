@@ -127,5 +127,30 @@ class GoBack(Base):
         start.assert_called_once_with("claude://code/continue?session=" + VIEWED)
 
 
+class Listed(Base):
+    """同じ流れの続きを書き足す前に、そのセッションがデスクトップ版の一覧に出ているかを見る（ADR-0038）。"""
+
+    def test_listed_archived_missing(self):
+        v = self.view()
+        self.assertEqual(v.listed(CLI), "missing")  # 取り込まれていない、消された
+        self.record("local_" + CLI, isArchived=False)
+        self.assertEqual(v.listed(CLI), "listed")
+        self.record("local_" + CLI, isArchived=True)
+        self.assertEqual(v.listed(CLI), "archived")
+        self.record("local_" + CLI, isArchived=False, org="acct-b/org-b")  # どこかの一覧に出ていれば、出ている
+        self.assertEqual(v.listed(CLI), "listed")
+
+    def test_an_unreadable_record_is_unknown(self):
+        self.record("local_" + CLI)  # isArchived が無い（形が変わった）
+        self.assertEqual(self.view().listed(CLI), "unknown")
+        path = self.record("local_" + CLI)
+        path.write_text("{broken", encoding="utf-8")
+        self.assertEqual(self.view().listed(CLI), "unknown")
+
+    def test_other_platforms_are_unknown(self):
+        with mock.patch.object(desktop_view, "sessions_root", return_value=None):
+            self.assertEqual(desktop_view.DesktopView().listed(CLI), "unknown")
+
+
 if __name__ == "__main__":
     unittest.main()

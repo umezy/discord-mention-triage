@@ -9,7 +9,8 @@
      （セッションの最後の返答と、届く文面が同じものになる。本人がセッションだけで続きを相談できるように。ADR-0037）
   4. 成功したら claim を processed/ へ。失敗したら claim を残して、数分後に tick が戻して再試行させる
 
-同じ流れの続きの件は、前の仕分けの会話を写した新しいセッションで仕分ける（--resume <前の ID> --fork-session。continuation.py）。
+同じ流れの続きの件は、前のセッションに書き足して仕分ける（--resume <前の ID>。ADR-0038）。前のセッションを、いま動いている
+Claude Code が開いているときなどは、前の会話を写した新しいセッションで仕分ける（--fork-session。ADR-0036。continuation.py）。
 
 Claude に与える権限は最小限:
   * 使える道具は Read / Grep / Glob / Edit / Write だけ（--tools）。Bash・ネットワーク・MCP・スキルは無し
@@ -94,7 +95,8 @@ def channel_dirs(watcher, files) -> list:
     return [(cid, tuple(expand_dir(d) for d in table[cid])) for cid in hit]
 
 
-def build_command(claude: str, cfg, watcher, home, session_name: str = "", extra_dirs=(), fork_from: str = "") -> list:
+def build_command(claude: str, cfg, watcher, home, session_name: str = "", extra_dirs=(), fork_from: str = "",
+                  append_to: str = "") -> list:
     """claude -p の引数。長い日本語の指示は引数に載せず、標準入力で渡す（Windows の引数は日本語が壊れる）。
 
     session_name は、記録を残すときだけ付ける。デスクトップ版の左側で、誰の、何の件かが分かるようにする（session_naming.py）。
@@ -104,8 +106,9 @@ def build_command(claude: str, cfg, watcher, home, session_name: str = "", extra
     モードは、デスクトップ版へ取り込む設定のときだけ "auto"（ADR-0033）。デスクトップ版は、取り込んだセッションを、記録に残った
     モードで開く。`claude --desktop --resume` には、ほかの指定を一緒に渡せない（2026-10-16 に確かめた）。
     extra_dirs は、この回の件の場所に当てたフォルダ（channel_dirs）。read_dirs と同じく、読むためだけに足す。
-    fork_from は、続ける前のセッションの ID（continuation.pick）。その会話を写した新しいセッションで動かす。前のセッションには書き足さない
-    （デスクトップ版は、外から書き足した分を読まず、本人が次に話すと記録が枝分かれする。ADR-0036）。道具・許可は、続けないときと同じ。"""
+    fork_from は、続ける前のセッションの ID（continuation.pick）。その会話を写した新しいセッションで動かす（ADR-0036）。
+    append_to は、書き足す前のセッションの ID（continue_mode が "append" のとき。ADR-0038）。名前は付け直さない（session_name は渡さない）。
+    どちらでも、道具・許可は、続けないときと同じ。"""
     cmd = [
         claude, "-p", "Follow the task written on stdin.",
         "--model", watcher.triage_model,
@@ -130,6 +133,8 @@ def build_command(claude: str, cfg, watcher, home, session_name: str = "", extra
         cmd += ["--name", session_name]
     if fork_from and cfg.keep_transcripts and continuation.valid_id(fork_from):
         cmd += ["--resume", fork_from, "--fork-session"]
+    elif append_to and cfg.keep_transcripts and continuation.valid_id(append_to):
+        cmd += ["--resume", append_to]
     if not cfg.keep_transcripts:
         cmd.append("--no-session-persistence")
     return cmd
@@ -311,6 +316,20 @@ def build_prompt(watcher, files, drafts_file: Path, now: datetime, continued: bo
     return text
 
 
+def continue_mode(cfg, session_id: str, name: str, view, held=continuation.held) -> str:
+    """同じ流れの続きを、どう続けるか（ADR-0038）。"append" = 前のセッションに書き足す / "fork" = 前の会話を写した新しいセッション。
+
+    書き足すのは、前のセッションを、いま動いている Claude Code が開いていないときだけ。デスクトップ版で話しかけたあとの、
+    裏の処理が動いている間に書き足すと、デスクトップ版は書き足した分を読まず、本人が次に話すと記録が枝分かれする。
+    取り込む設定のときは、デスクトップ版の一覧に出ていること（アーカイブされていない）も条件にする。本人がしまったセッションに
+    書き足しても、目に入らないので。名前が控えに無い（古い形の）ときも写す（名前の 1 通を送れないので）。"""
+    if not name or held(session_id):
+        return "fork"
+    if cfg.desktop_import and view.listed(session_id) != "listed":
+        return "fork"
+    return "append"
+
+
 def claimed_items(files) -> list:
     """claim したファイルの items[] を、ファイルをまたいで並べたもの。"""
     return [item for f in files for item in tick.read_items(Path(f)) if isinstance(item, dict)]
@@ -460,22 +479,37 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
         name = str(meta.get("session_name") or "")  # 古い形の控えには無い（そのときは名前の 1 通を送らない）
         summary["counts"] = meta.get("counts")  # 通知するかどうかの判定に使う。古い形の控えには無い（そのときは通知する）
         continued = str(meta.get("continued_from") or "")
+        mode = str(meta.get("continue_mode") or "")
         summary["reason"] = "reused_digest"
     else:
         drafts_file = home.drafts / f"{now.astimezone(JST):%Y%m%d-%H%M%S}-{rid}.md"
         for f in (digest_file, drafts_file):
             f.unlink(missing_ok=True)
-        # 同じ流れの続きなら、前の会話を写した新しいセッションで仕分ける（記録を残す設定のときだけ。ADR-0036）
-        continued = continuation.pick(continuation.load(home), items) if cfg.keep_transcripts else ""
+        # 同じ流れの続きなら、前のセッションに書き足すか、前の会話を写した新しいセッションで仕分ける
+        # （記録を残す設定のときだけ。ADR-0036、ADR-0038）
+        table = continuation.load(home) if cfg.keep_transcripts else {}
+        continued = continuation.pick(table, items) if cfg.keep_transcripts else ""
+        mode = ""
         if continued:
-            summary["continued_from"] = continued
-        name = session_name_for(files, continued=bool(continued)) if cfg.keep_transcripts else ""
+            view = view or desktop_view.DesktopView()
+            try:
+                mode = continue_mode(cfg, continued, continuation.name_of(table, items), view)
+            except Exception:  # noqa: BLE001 - 判定できなければ、前のセッションに触らない（写す）
+                mode = "fork"
+            summary.update(continued_from=continued, continue_mode=mode)
+        if mode == "append":
+            name = continuation.name_of(table, items)
+        else:
+            name = session_name_for(files, continued=bool(continued)) if cfg.keep_transcripts else ""
         if command is None:
             claude = claude_bin.find_claude(cfg.claude_bin)
             if not claude:
                 return finish_failure(home, files, summary, "claude_not_found", poster, started)
             extra = [d for _, dirs in channel_dirs(watcher, files) for d in dirs]
-            command = build_command(claude, cfg, watcher, home, session_name=name, extra_dirs=extra, fork_from=continued)
+            if mode == "append":
+                command = build_command(claude, cfg, watcher, home, extra_dirs=extra, append_to=continued)
+            else:
+                command = build_command(claude, cfg, watcher, home, session_name=name, extra_dirs=extra, fork_from=continued)
         prompt = build_prompt(watcher, files, drafts_file, now, continued=bool(continued))
         env = child_env(home)
         summary["auth"] = auth_source(env)
@@ -508,7 +542,8 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
         # 投稿だけ失敗したときに、Claude を動かさずに送り直せるよう、投稿本文を控えてから送る
         digest_file.write_text(digest, encoding="utf-8")
         meta_file.write_text(json.dumps({"drafts_file": str(drafts_file), "session_id": session_id, "session_name": name,
-                                         "counts": info["counts"], "continued_from": continued}), encoding="utf-8")
+                                         "counts": info["counts"], "continued_from": continued,
+                                         "continue_mode": mode}), encoding="utf-8")
 
     body = digest_file.read_text(encoding="utf-8")
     ok, line = notify.send(home, body, mention=needs_mention(summary["counts"], body), poster=poster)
@@ -531,7 +566,7 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
     summary.update(ok=True, reason=summary["reason"] or "done", post=line)
     if cfg.keep_transcripts and session_id:
         try:
-            continuation.record(home, items, session_id, continued)  # 次の回が、この会話を引き継げるように
+            continuation.record(home, items, session_id, continued, name=name)  # 次の回が、この会話を引き継げるように
         except OSError:
             pass  # 控えられなくても、仕分けは成功のまま（次の回が、新しいセッションになるだけ）
     if cfg.desktop_import and cfg.keep_transcripts and session_id and session_naming.safe(name):
@@ -539,9 +574,10 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
         # 頼むときに、どのセッションかを正確に言える。失敗しても仕分けは成功のまま。名前には本文の頭が入るので、記録には結果だけ書く
         sent, name_line = notify.send(home, name, mention=False, poster=poster)
         summary["name_post"] = "ok" if sent else name_line
-    if cfg.desktop_import and cfg.keep_transcripts and session_id:
+    if cfg.desktop_import and cfg.keep_transcripts and session_id and mode != "append":
         # 投稿のあと、成功した回だけ。結果は記録に残すが、失敗しても仕分けの成否には影響させない。
-        # 取り込むと、デスクトップ版の表示がそのセッションへ移るので、見ていたセッションへ戻す（ADR-0035）
+        # 取り込むと、デスクトップ版の表示がそのセッションへ移るので、見ていたセッションへ戻す（ADR-0035）。
+        # 前のセッションに書き足した回は、取り込み済みなので取り込まない（取り込み直しても、一覧の並びは変わらず、表示が移るだけ）
         view = view or desktop_view.DesktopView()
         try:
             viewed = view.remember()

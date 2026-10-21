@@ -11,10 +11,14 @@
 （%APPDATA%\\Claude\\claude-code-sessions\\<アカウント>\\<組織>\\local_<ID>.json）の lastFocusedAt が、いちばん新しいもの。
 取り込んだセッションが開いたことも、その記録に lastFocusedAt が付いたことで知る（開いてから 1 秒ほどで書かれる）。
 どちらもデスクトップ版の中の形なので、変わって読めなくなったら、戻すのをやめるだけにする（取り込みは続ける）。
+
+同じ流れの続きを、前のセッションに書き足すときは（ADR-0038）、そのセッションが一覧に出ているか（取り込まれていて、アーカイブされて
+いないか）を、同じ記録の isArchived で確かめる（listed）。
 """
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import time
@@ -56,6 +60,23 @@ def viewed_session(root: Path | None) -> str:
     return best
 
 
+def listed(root: Path | None, cli_session_id: str) -> str:
+    """そのセッションが、デスクトップ版の一覧に出ているか: listed / archived / missing（取り込まれていない、消された）/ unknown。"""
+    if root is None:
+        return "unknown"
+    states = set()
+    for path in root.glob("*/*/local_%s.json" % cli_session_id):
+        try:
+            archived = json.loads(path.read_text(encoding="utf-8")).get("isArchived")
+        except (OSError, ValueError, AttributeError):
+            archived = None
+        states.add({False: "listed", True: "archived"}.get(archived, "unknown"))
+    for state in ("listed", "unknown", "archived"):
+        if state in states:
+            return state
+    return "missing"
+
+
 def open_link(url: str) -> None:
     os.startfile(url)  # noqa: S606 - claude:// をデスクトップ版に渡す。Windows だけ（sessions_root が None なら呼ばない）
 
@@ -70,6 +91,9 @@ class DesktopView:
 
     def remember(self) -> str:
         return viewed_session(self.root)
+
+    def listed(self, cli_session_id: str) -> str:
+        return listed(self.root, cli_session_id)
 
     def go_back(self, viewed: str, cli_session_id: str) -> str:
         """戻した結果（実行記録に書く短い文字列）: ok / unsupported / nothing_viewed / not_opened。"""

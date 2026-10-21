@@ -533,9 +533,13 @@ class Command(Base):
 class FakeView:
     """見ていたセッションを控えて、取り込んだあとに戻す係（desktop_view.DesktopView）の偽物。本物のデスクトップ版には触らない。"""
 
-    def __init__(self, viewed="local_viewed", result="ok", fail_remember=False):
-        self.viewed, self.result, self.fail_remember = viewed, result, fail_remember
+    def __init__(self, viewed="local_viewed", result="ok", fail_remember=False, state="listed"):
+        self.viewed, self.result, self.fail_remember, self.state = viewed, result, fail_remember, state
         self.calls = []
+
+    def listed(self, cli_session_id):
+        self.calls.append(("listed", cli_session_id))
+        return self.state
 
     def remember(self):
         self.calls.append("remember")
@@ -885,7 +889,7 @@ class ChannelDirs(Base):
     def test_triage_adds_the_folders_of_the_claimed_items(self):
         seen = []
 
-        def fake_build(claude, cfg, watcher, home, session_name="", extra_dirs=(), fork_from=""):
+        def fake_build(claude, cfg, watcher, home, session_name="", extra_dirs=(), fork_from="", append_to=""):
             seen.append(list(extra_dirs))
             return FAKE
 
@@ -911,7 +915,8 @@ class ChannelDirs(Base):
 
 
 class Continuation(Base):
-    """同じ流れの続きの件は、前の仕分けの会話を写した新しいセッションで仕分ける（continuation.py、ADR-0036）。"""
+    """同じ流れの続きの件は、前のセッションに書き足して仕分ける（ADR-0038）。前のセッションを、いま動いている Claude Code が
+    開いているときなどは、前の会話を写した新しいセッションで仕分ける（continuation.py、ADR-0036）。"""
 
     def setUp(self):
         super().setUp()
@@ -936,36 +941,136 @@ class Continuation(Base):
         path.write_text(json.dumps({"items": [it]}), encoding="utf-8")
         return path
 
-    def run_once(self, files, cfg=None):
-        """build_command に渡った名前と、続ける先を控える。claude は偽物（session_id は、いつも sess-fake）。"""
+    def run_once(self, files, cfg=None, **kw):
+        """build_command に渡った名前と、写す先・書き足す先を控える。claude は偽物（session_id は、いつも sess-fake）。"""
         cfg = cfg or self.cfg
         seen = []
 
-        def fake_build(claude, cfg, watcher, home, session_name="", extra_dirs=(), fork_from=""):
-            seen.append((session_name, fork_from))
+        def fake_build(claude, cfg, watcher, home, session_name="", extra_dirs=(), fork_from="", append_to=""):
+            seen.append((session_name, fork_from, append_to))
             return FAKE
 
         with mock.patch.object(run_claude.claude_bin, "find_claude", return_value="CLAUDE"), \
                 mock.patch.object(run_claude, "build_command", side_effect=fake_build):
-            res = run_claude.triage(self.home, cfg.watchers[0], cfg, files, now=NOW, poster=self.poster)
+            res = run_claude.triage(self.home, cfg.watchers[0], cfg, files, now=NOW, poster=self.poster, **kw)
         return res, seen
+
+    def hold(self, session_id="sess-fake", pid=None):
+        """Claude Code が、動いている間に書く印（<設定フォルダ>/sessions/<プロセス ID>.json）を置く。既定は、このテストのプロセス。"""
+        pid = os.getpid() if pid is None else pid
+        folder = self.claude_dir / "sessions"
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / ("%d.json" % pid)).write_text(
+            json.dumps({"pid": pid, "sessionId": session_id, "kind": "interactive", "entrypoint": "claude-desktop"}),
+            encoding="utf-8")
+
+    def desktop_cfg(self):
+        return config.parse({"state_root": self.cfg.state_root.as_posix(), "keep_transcripts": True,
+                             "desktop_import": True, "watchers": [{"name": "me", "user_id": "1"}]})
 
     def table(self):
         return continuation.load(self.home)
 
-    def test_a_reply_in_the_same_flow_continues_from_the_previous_session(self):
+    def test_a_reply_in_the_same_flow_is_added_to_the_previous_session(self):
         res, seen = self.run_once([self.claim_msg("a.json", 100)])
-        self.assertEqual(seen, [("alice「SECRET-BODY please」#dev", "")])  # 初めての場所は、新しいセッション
+        self.assertEqual(seen, [("alice「SECRET-BODY please」#dev", "", "")])  # 初めての場所は、新しいセッション
         self.assertEqual(self.table()["20"]["message_ids"], ["100"])
+        self.assertEqual(self.table()["20"]["name"], "alice「SECRET-BODY please」#dev")
         self.transcript()
         res, seen = self.run_once([self.claim_msg("b.json", 200, before=[90, 100])])
         self.assertTrue(res["ok"], res)
-        self.assertEqual(seen, [("alice「SECRET-BODY please」#dev（続き）", "sess-fake")])
-        self.assertEqual(res["continued_from"], "sess-fake")
+        self.assertEqual(seen, [("", "", "sess-fake")])  # 名前は付け直さない
+        self.assertEqual((res["continued_from"], res["continue_mode"]), ("sess-fake", "append"))
         self.assertEqual(self.table()["20"]["message_ids"], ["100", "200"])  # 続けた回は、前に仕分けた ID も引き継ぐ
+        self.assertEqual(self.table()["20"]["name"], "alice「SECRET-BODY please」#dev")  # 名前も引き継ぐ
         rec = next((self.home.root / "runs").glob("*-%s.json" % res["run_id"])).read_text(encoding="utf-8")
         self.assertIn('"continued_from": "sess-fake"', rec)
         self.assertNotIn("SECRET-BODY", rec)
+
+    def test_a_session_open_in_a_running_claude_is_copied_instead(self):
+        # デスクトップ版で話しかけたあと、裏の処理が動いている間に書き足すと、記録が枝分かれする（ADR-0038）
+        self.run_once([self.claim_msg("a.json", 100)])
+        self.transcript()
+        self.hold()
+        res, seen = self.run_once([self.claim_msg("b.json", 200, before=[100])])
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(seen, [("alice「SECRET-BODY please」#dev（続き）", "sess-fake", "")])
+        self.assertEqual(res["continue_mode"], "fork")
+        self.assertEqual(self.table()["20"]["name"], "alice「SECRET-BODY please」#dev（続き）")  # 次は、写した方に書き足す
+
+    def test_a_previous_entry_without_a_name_is_copied(self):
+        # 名前を控える前の形。名前の 1 通を送れないので、写して、新しい名前で控え直す
+        self.home.root.joinpath("sessions.json").write_text(
+            json.dumps({"20": {"session_id": "sess-fake", "message_ids": ["100"], "at": int(time.time())}}), encoding="utf-8")
+        self.transcript()
+        res, seen = self.run_once([self.claim_msg("b.json", 200, before=[100])])
+        self.assertEqual(seen, [("alice「SECRET-BODY please」#dev（続き）", "sess-fake", "")])
+        self.assertEqual(self.table()["20"]["name"], "alice「SECRET-BODY please」#dev（続き）")
+
+    def test_held_reads_the_running_sessions_of_claude_code(self):
+        env = {"CLAUDE_CONFIG_DIR": str(self.claude_dir)}
+        self.assertFalse(continuation.held("sess-fake", env))  # 印のフォルダが無い
+        self.hold("other")
+        self.hold("sess-fake", pid=999999)  # 落ちたプロセスの印が残っている
+        folder = self.claude_dir / "sessions"
+        folder.joinpath("bad.json").write_text("{not json", encoding="utf-8")
+        folder.joinpath("odd.json").write_text(json.dumps({"pid": "x", "sessionId": "sess-fake"}), encoding="utf-8")
+        alive = {os.getpid()}.__contains__
+        self.assertFalse(continuation.held("sess-fake", env, alive=alive))
+        self.hold("sess-fake")
+        self.assertTrue(continuation.held("sess-fake", env, alive=alive))
+        self.assertTrue(continuation.pid_alive(os.getpid()))
+        self.assertFalse(continuation.pid_alive(0))
+
+    def test_in_the_desktop_only_a_listed_session_is_added_to(self):
+        cfg = self.desktop_cfg()
+        imports = []
+
+        def imp(*a, **k):
+            imports.append(a[1])
+            return "ok"
+
+        self.run_once([self.claim_msg("a.json", 100)], cfg=cfg, import_fn=imp, view=FakeView())
+        self.transcript()
+        for state, mode in (("archived", "fork"), ("missing", "fork"), ("unknown", "fork"), ("listed", "append")):
+            with self.subTest(state):
+                self.home.root.joinpath("sessions.json").write_text(json.dumps({"20": {
+                    "session_id": "sess-fake", "name": "alice「SECRET-BODY please」#dev", "message_ids": ["100"],
+                    "at": int(time.time())}}), encoding="utf-8")
+                imports.clear()
+                self.posts.clear()
+                view = FakeView(state=state)
+                res, seen = self.run_once([self.claim_msg("b-%s.json" % state, 200, before=[100])], cfg=cfg,
+                                          import_fn=imp, view=view)
+                self.assertTrue(res["ok"], res)
+                self.assertEqual(res["continue_mode"], mode)
+                self.assertIn(("listed", "sess-fake"), view.calls)
+                # 書き足した回は取り込まない（表示が移らない）。名前の 1 通は、書き足したセッションの名前で送る
+                self.assertEqual(imports, [] if mode == "append" else ["sess-fake"])
+                self.assertEqual(self.posts[1][0], "alice「SECRET-BODY please」#dev" + ("" if mode == "append" else "（続き）"))
+                self.assertEqual("desktop_import" in res, mode != "append")
+
+    def test_a_reposted_digest_of_an_appended_run_is_not_imported(self):
+        cfg = self.desktop_cfg()
+        imports = []
+
+        def imp(*a, **k):
+            imports.append(a[1])
+            return "ok"
+
+        self.run_once([self.claim_msg("a.json", 100)], cfg=cfg, import_fn=imp, view=FakeView())
+        self.transcript()
+        imports.clear()
+        self.post_fails = True
+        f = self.claim_msg("b.json", 200, before=[100])
+        res, _ = self.run_once([f], cfg=cfg, import_fn=imp, view=FakeView())
+        self.assertEqual((res["reason"], res["continue_mode"]), ("post_failed", "append"))
+        self.post_fails = False
+        os.environ["FAKE_CLAUDE_MODE"] = "fail"  # Claude は動かさない
+        res, seen = self.run_once([f], cfg=cfg, import_fn=imp, view=FakeView())
+        self.assertEqual((res["reason"], seen), ("reused_digest", []))
+        self.assertEqual(imports, [])
+        self.assertEqual(self.posts[-1][0], "alice「SECRET-BODY please」#dev")
 
     def test_it_starts_a_new_session_unless_the_flow_is_the_same(self):
         self.run_once([self.claim_msg("a.json", 100)])
@@ -982,7 +1087,7 @@ class Continuation(Base):
                     encoding="utf-8")
                 res, seen = self.run_once(files)
                 self.assertTrue(res["ok"], res)
-                self.assertEqual(seen[0][1], "")
+                self.assertEqual(seen[0][1:], ("", ""))
                 self.assertNotIn("（続き）", seen[0][0])
                 self.assertNotIn("continued_from", res)
 
@@ -990,7 +1095,7 @@ class Continuation(Base):
         self.run_once([self.claim_msg("a.json", 100)])  # 記録のファイルを作らない（30 日で消えた、本人が消した）
         res, seen = self.run_once([self.claim_msg("b.json", 200, before=[100])])
         self.assertTrue(res["ok"], res)
-        self.assertEqual(seen[0][1], "")
+        self.assertEqual(seen[0][1:], ("", ""))
 
     def test_a_failed_continued_run_is_retried_in_a_new_session(self):
         self.run_once([self.claim_msg("a.json", 100)])
@@ -998,12 +1103,12 @@ class Continuation(Base):
         os.environ["FAKE_CLAUDE_MODE"] = "fail"
         f = self.claim_msg("b.json", 200, before=[100])
         res, seen = self.run_once([f])
-        self.assertEqual((res["reason"], seen[0][1]), ("claude_exit_1", "sess-fake"))
+        self.assertEqual((res["reason"], seen[0][2]), ("claude_exit_1", "sess-fake"))
         self.assertNotIn("20", self.table())  # 続ける先が壊れていても、止まらない
         os.environ["FAKE_CLAUDE_MODE"] = "ok"
         res, seen = self.run_once([f])
         self.assertTrue(res["ok"], res)
-        self.assertEqual(seen[0][1], "")
+        self.assertEqual(seen[0][1:], ("", ""))
 
     def test_nothing_is_kept_or_continued_without_transcripts(self):
         cfg = config.parse({"state_root": self.cfg.state_root.as_posix(), "watchers": [{"name": "me", "user_id": "1"}]})
@@ -1012,7 +1117,7 @@ class Continuation(Base):
         self.transcript()
         res, seen = self.run_once([self.claim_msg("b.json", 200, before=[100])], cfg=cfg)
         self.assertTrue(res["ok"], res)
-        self.assertEqual(seen, [("", "")])
+        self.assertEqual(seen, [("", "", "")])
 
     def test_the_command_forks_the_previous_session_and_keeps_the_same_limits(self):
         plain = run_claude.build_command("CLAUDE", self.cfg, self.watcher, self.home)
@@ -1023,6 +1128,16 @@ class Continuation(Base):
             self.assertNotIn("--resume", run_claude.build_command("CLAUDE", self.cfg, self.watcher, self.home, fork_from=bad))
         off = config.parse({"state_root": self.cfg.state_root.as_posix(), "watchers": [{"name": "me", "user_id": "1"}]})
         self.assertNotIn("--resume", run_claude.build_command("CLAUDE", off, off.watchers[0], self.home, fork_from="abc"))
+
+    def test_the_command_adds_to_the_previous_session_and_keeps_the_same_limits(self):
+        plain = run_claude.build_command("CLAUDE", self.cfg, self.watcher, self.home)
+        cmd = run_claude.build_command("CLAUDE", self.cfg, self.watcher, self.home, append_to="3888cecd-4303-4920")
+        self.assertEqual(cmd[cmd.index("--resume"):], ["--resume", "3888cecd-4303-4920"])  # 写さない（--fork-session なし）
+        self.assertEqual(cmd[:cmd.index("--resume")], plain)
+        for bad in ("", "a b", 'a" & calc', "--bare", "x" * 65):
+            self.assertNotIn("--resume", run_claude.build_command("CLAUDE", self.cfg, self.watcher, self.home, append_to=bad))
+        off = config.parse({"state_root": self.cfg.state_root.as_posix(), "watchers": [{"name": "me", "user_id": "1"}]})
+        self.assertNotIn("--resume", run_claude.build_command("CLAUDE", off, off.watchers[0], self.home, append_to="abc"))
 
     def test_the_prompt_says_it_is_a_continuation_only_when_it_is(self):
         f = self.claim_msg("a.json", 100)
