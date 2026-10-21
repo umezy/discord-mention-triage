@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="940" height="442" viewBox="0 0 940 442" role="img" font-family="'Segoe UI','Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif">
   <title>1 回の起動で動くこと</title>
-  <desc>タスクスケジューラが 2 分おきに dispatch.py を 1 つだけ起動する。dispatch.py の中で、受付、開封、仕分けが上から順に動き、同時に動くのは 1 つだけ。受付は Discord の検索 API と REST へ GET だけを出し、メンションを inbox に 1 件 1 ファイルで書き出す。開封は inbox から claims へ移す。仕分けは新着があるときだけ claude -p に指示する。claude -p は道具が 5 つだけで、鍵と Webhook は渡されず、drafts と out に書く。仕分けは out の投稿本文を確かめてから、自分専用チャンネルへ Webhook で投稿し、成功したら claims から processed へ移す。3 回失敗した件は failed へ移す。</desc>
+  <desc>タスクスケジューラが 2 分おきに dispatch.py を 1 つだけ起動する。dispatch.py の中で、受付、開封、仕分けが上から順に動き、同時に動くのは 1 つだけ。受付は Discord の検索 API と REST へ GET だけを出し、メンションを inbox に 1 件 1 ファイルで書き出す。開封は inbox から claims へ移す。仕分けは新着があるときだけ claude -p に指示する。claude -p は道具が 5 つだけで、鍵と Webhook は渡されず、drafts に下書きの控えを書き、投稿本文を最後の返答で返す。仕分けはその返答を確かめてから、自分専用チャンネルへ Webhook で投稿し、成功したら claims から processed へ移す。3 回失敗した件は failed へ移す。</desc>
   <style>
     .bg { fill: #ffffff; stroke: #d3ddd9; }
     .box { fill: #ffffff; stroke: #15201e; stroke-width: 1.2; }
@@ -33,7 +33,7 @@
   <text class="s" x="106" y="187" text-anchor="middle">検索 API と REST</text>
   <rect class="box" x="16" y="312" width="180" height="64" rx="8"/>
   <text class="t" x="106" y="339" text-anchor="middle">自分専用チャンネル</text>
-  <text class="s" x="106" y="359" text-anchor="middle">out/ を確かめてから送る</text>
+  <text class="s" x="106" y="359" text-anchor="middle">返答を確かめてから送る</text>
 
   <!-- あなたの PC -->
   <rect class="zone" x="226" y="16" width="698" height="410" rx="12"/>
@@ -85,8 +85,8 @@
   <text class="s" x="839" y="292" text-anchor="middle">成功したら移す</text>
   <text class="s" x="839" y="306" text-anchor="middle">3 回失敗で failed/</text>
   <rect class="file" x="770" y="326" width="138" height="36" rx="6"/>
-  <text class="m" x="839" y="348" text-anchor="middle">drafts/  out/</text>
-  <text class="s" x="839" y="380" text-anchor="middle">下書きの控えと投稿本文</text>
+  <text class="m" x="839" y="348" text-anchor="middle">drafts/</text>
+  <text class="s" x="839" y="380" text-anchor="middle">下書きの控え</text>
 
   <!-- 線 -->
   <line class="hot" x1="262" y1="172" x2="200" y2="172" marker-end="url(#b)"/>
@@ -98,7 +98,7 @@
   <line class="edge" x1="472" y1="330" x2="562" y2="330" marker-end="url(#a)"/>
   <text class="s" x="517" y="321" text-anchor="middle">指示する</text>
   <line class="edge" x1="566" y1="360" x2="476" y2="360" marker-end="url(#a)"/>
-  <text class="s" x="521" y="375" text-anchor="middle">終わる</text>
+  <text class="s" x="521" y="375" text-anchor="middle">投稿本文を返す</text>
   <line class="edge" x1="726" y1="344" x2="766" y2="344" marker-end="url(#a)"/>
   <text class="s" x="746" y="336" text-anchor="middle">書く</text>
   <line class="edge" x1="726" y1="258" x2="766" y2="258" marker-end="url(#a)"/>

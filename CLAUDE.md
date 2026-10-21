@@ -16,7 +16,7 @@ Discord のメンションを読み取り専用で仕分けし、返信ドラフ
 3. **PR の自動レビューは無効。**（有効にする設定は無い。`pr_auto_review: true` は、設定の読み込みで拒否する）有効にする実装も、`watcher/pr_policy.py` の許可条件
    （fail-closed）を緩める変更も、理由を人間に確認してから。
 4. **仕分けの Claude（`claude -p`）の権限を広げない。** `pipeline/run_claude.py` の `build_command` は、道具を
-   Read / Grep / Glob / Edit / Write に限り、許可する書き込みを `drafts/` と `out/` に限っている。モードは `dontAsk` で、`desktop_import: true` のときだけ `auto`（ADR-0033）。Bash・ネットワーク・MCP・スキルを足す、
+   Read / Grep / Glob / Edit / Write に限り、許可する書き込みを `drafts/` に限っている（投稿本文は、最後の返答で受け取る。ADR-0037）。モードは `dontAsk` で、`desktop_import: true` のときだけ `auto`（ADR-0033）。Bash・ネットワーク・MCP・スキルを足す、
    `--bare` を付ける、Webhook URL や API キー系の環境変数を渡す、といった変更はしない（`tests/test_run_claude.py` が検査）。
 5. **秘密と本文をリポジトリに入れない。** トークン・Webhook URL・`inbox/` `drafts/` 等は `~/.discord-mention-triage/`。
    `config.py` はリポジトリ内を指す `state_root` を拒否する。この検査を外さない。

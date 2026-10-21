@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="900" height="412" viewBox="0 0 900 412" role="img" font-family="'Segoe UI','Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif">
   <title>しくみ</title>
-  <desc>タスクスケジューラが 2 分おきに起動し、受付、開封、仕分けが順に動く。受付は Discord のサーバーへ GET だけを出して inbox に書き出す。開封は inbox から claims へ移す。仕分けは claude -p に標準入力で指示し、claude -p は drafts と out に書いて、結果を仕分けへ返す。仕分けは、その結果を確かめてから、自分専用チャンネルへ Webhook で投稿する。投稿がボットの検索に出るまで約 100 秒、起動は 2 分おき、仕分けに 1〜2 分で、メンションから 3〜6 分で届く。鍵 1 のボットのトークンは Discord を読むのに、鍵 2 の Webhook の URL は専用チャンネルへ投稿するのに、鍵 3 の OAuth トークンは claude -p を動かすのに要る。</desc>
+  <desc>タスクスケジューラが 2 分おきに起動し、受付、開封、仕分けが順に動く。受付は Discord のサーバーへ GET だけを出して inbox に書き出す。開封は inbox から claims へ移す。仕分けは claude -p に標準入力で指示し、claude -p は drafts に下書きの控えを書き、投稿本文を最後の返答で仕分けへ返す。仕分けは、その結果を確かめてから、自分専用チャンネルへ Webhook で投稿する。投稿がボットの検索に出るまで約 100 秒、起動は 2 分おき、仕分けに 1〜2 分で、メンションから 3〜6 分で届く。鍵 1 のボットのトークンは Discord を読むのに、鍵 2 の Webhook の URL は専用チャンネルへ投稿するのに、鍵 3 の OAuth トークンは claude -p を動かすのに要る。</desc>
   <style>
     .bg { fill: #ffffff; stroke: #d3ddd9; }
     .box { fill: #ffffff; stroke: #15201e; stroke-width: 1.2; }
@@ -80,7 +80,7 @@
   <rect class="tmbox" x="598" y="366" width="64" height="22" rx="11"/>
   <text class="tm" x="630" y="381" text-anchor="middle">1〜2 分</text>
   <rect class="file" x="746" y="286" width="122" height="36" rx="6"/>
-  <text class="m" x="807" y="308" text-anchor="middle">drafts/  out/</text>
+  <text class="m" x="807" y="308" text-anchor="middle">drafts/</text>
 
   <!-- 線 -->
   <line class="hot" x1="280" y1="152" x2="214" y2="152" marker-end="url(#b)"/>
@@ -92,7 +92,7 @@
   <line class="edge" x1="470" y1="296" x2="566" y2="296" marker-end="url(#a)"/>
   <text class="s" x="518" y="288" text-anchor="middle">標準入力で指示</text>
   <line class="edge" x1="570" y1="314" x2="474" y2="314" marker-end="url(#a)"/>
-  <text class="s" x="518" y="329" text-anchor="middle">結果を返す</text>
+  <text class="s" x="518" y="329" text-anchor="middle">投稿本文を返す</text>
   <line class="edge" x1="690" y1="304" x2="742" y2="304" marker-end="url(#a)"/>
   <text class="s" x="716" y="295" text-anchor="middle">書く</text>
   <line class="hot" x1="280" y1="304" x2="214" y2="304" marker-end="url(#b)"/>

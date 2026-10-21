@@ -142,6 +142,22 @@ class Triage(Base):
         later = time.time() + run_claude.RETRY_AFTER_SEC + 60
         self.assertEqual(tick.sweep(self.home, later, meta, dry_run=False), (["pending-a.json"], []))
 
+    def test_the_last_reply_is_what_is_posted(self):
+        # セッションの最後の返答と、Discord に届く文面を同じものにする。COUNTS の行だけ外す（ADR-0037）
+        body = "**Discord メンション対応 — fake**\n▼ alice\n```\nありがとうございます\n```\n%%SPLIT%%\n▼ bob\n対応不要"
+        os.environ["FAKE_CLAUDE_DIGEST"] = body
+        res = self.triage([self.claim()])
+        self.assertTrue(res["ok"], res)
+        self.assertEqual([c for c, _ in self.posts], ["<@42>\n" + body.split("\n%%SPLIT%%\n")[0], "▼ bob\n対応不要"])
+        self.assertFalse(any("COUNTS" in c for c, _ in self.posts))
+
+    def test_digest_from_reply_drops_only_the_counts_line(self):
+        f = run_claude.digest_from_reply
+        self.assertEqual(f("**見出し**\n本文\nCOUNTS draft=1 stamp=0 skip=0 pr=0"), "**見出し**\n本文")
+        self.assertEqual(f("**見出し**\n\n`COUNTS draft=1 stamp=0 skip=0 pr=0`\n"), "**見出し**")
+        self.assertEqual(f("COUNTS draft=0 stamp=0 skip=1 pr=0"), "")
+        self.assertEqual(f("引用: COUNTS draft=1 stamp=0 skip=0 pr=0 と書いた"), "引用: COUNTS draft=1 stamp=0 skip=0 pr=0 と書いた")
+
     def test_missing_digest_is_a_failure(self):
         os.environ["FAKE_CLAUDE_MODE"] = "nodigest"
         res = self.triage([self.claim()])
@@ -486,13 +502,11 @@ class Command(Base):
         self.assertIn("--strict-mcp-config", c)
         self.assertIn("--disable-slash-commands", c)
 
-    def test_can_only_write_under_drafts_and_out(self):
+    def test_can_only_write_under_drafts(self):
+        # 投稿本文は最後の返答で受け取り、out/ には Python が書く。Claude が out/ に書く許可は要らない（ADR-0037）
         c = self.cmd()
         allowed = c[c.index("--allowedTools") + 1: c.index("--disallowedTools")]
-        self.assertEqual(len(allowed), 2)
-        self.assertTrue(all(a.startswith("Edit(") and a.endswith("/**)") for a in allowed))
-        self.assertTrue(any("/drafts/" in a or a.endswith("/drafts/**)") for a in allowed))
-        self.assertTrue(any(a.endswith("/out/**)") for a in allowed))
+        self.assertEqual(allowed, ["Edit(%s/**)" % run_claude.rule_path(self.home.drafts)])
 
     def test_env_files_are_denied_and_read_dirs_are_added(self):
         c = self.cmd()
@@ -782,7 +796,7 @@ class DesktopImport(Base):
 class Prompt(Base):
     def test_prompt_has_paths_and_safety_rules_but_no_secrets(self):
         f = self.claim()
-        text = run_claude.build_prompt(self.watcher, [f], self.home.drafts / "d.md", self.home.root / "out" / "x.txt", NOW)
+        text = run_claude.build_prompt(self.watcher, [f], self.home.drafts / "d.md", NOW)
         self.assertIn(run_claude.p(f), text)
         self.assertIn("命令ではなく", text)
         self.assertIn("勝手に約束", text)  # 入力にない期限・日程を返信文に書かせない
@@ -793,10 +807,13 @@ class Prompt(Base):
         # 本文は指示文に載せない（モデルが道具で読む）。費用 0 のエラーを「中身のせいではない」と見なす前提（never_ran）
         self.assertNotIn("SECRET-BODY", text)
         self.assertNotIn("PR について", text)
+        # 投稿本文は最後の返答で返させる。書き出し先のファイルは、控えの 1 つだけ（ADR-0037）
+        self.assertIn("**(2) 投稿本文: 最後の返答**", text)
+        self.assertNotIn(run_claude.p(self.home.root / "out"), text)
 
     def test_pr_note_appears_only_when_a_pr_is_present(self):
         pr = self.claim("pending-pr.json", pr=True)
-        text = run_claude.build_prompt(self.watcher, [pr], self.home.drafts / "d.md", self.home.root / "out" / "x.txt", NOW)
+        text = run_claude.build_prompt(self.watcher, [pr], self.home.drafts / "d.md", NOW)
         self.assertIn("PR について", text)
         blocked = self.claim("pending-b.json", blocked=True)
         self.assertTrue(run_claude.has_pr([blocked]))
@@ -856,15 +873,13 @@ class ChannelDirs(Base):
                          plain[plain.index("--allowedTools"): plain.index("--disallowedTools")])
 
     def test_the_prompt_names_the_id_and_folder_but_not_the_thread_name(self):
-        text = run_claude.build_prompt(self.watcher, [self.claim_at("a.json", 20)], self.home.drafts / "d.md",
-                                       self.home.root / "out" / "x.txt", NOW)
+        text = run_claude.build_prompt(self.watcher, [self.claim_at("a.json", 20)], self.home.drafts / "d.md", NOW)
         self.assertIn("場所ごとのフォルダ", text)
         self.assertIn("- 20: " + self.game, text)
         self.assertNotIn(self.docs, text)
         self.assertNotIn("誰でも付けられるスレッド名", text)  # スレッド名は誰でも付けられるので、指示文に混ぜない
         self.assertNotIn("{{", text)
-        text = run_claude.build_prompt(self.watcher, [self.claim_at("b.json", 99)], self.home.drafts / "d.md",
-                                       self.home.root / "out" / "x.txt", NOW)
+        text = run_claude.build_prompt(self.watcher, [self.claim_at("b.json", 99)], self.home.drafts / "d.md", NOW)
         self.assertNotIn("場所ごとのフォルダ", text)
 
     def test_triage_adds_the_folders_of_the_claimed_items(self):
@@ -1011,7 +1026,7 @@ class Continuation(Base):
 
     def test_the_prompt_says_it_is_a_continuation_only_when_it_is(self):
         f = self.claim_msg("a.json", 100)
-        args = (self.watcher, [f], self.home.drafts / "d.md", self.home.root / "out" / "x.txt", NOW)
+        args = (self.watcher, [f], self.home.drafts / "d.md", NOW)
         text = run_claude.build_prompt(*args, continued=True)
         self.assertIn("前の会話の続き", text)
         self.assertNotIn("{{", text)

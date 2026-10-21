@@ -3,13 +3,13 @@
 タスクスケジューラが 2 分おきに `pipeline/dispatch.py` を起動し、1 回の起動で、受付・開封・仕分けが順に動く。常駐するプロセスは無い。
 この形にした理由は [ADR-0014](adr/0014-poll-search-api-single-entry.md)。
 
-![タスクスケジューラが dispatch.py を 2 分おきに起動し、受付、開封、仕分けが順に動く。受付は Discord へ GET だけを出し、inbox に書き出す。開封は claims へ移し、仕分けは claude -p に指示して、out/ を確かめてから専用チャンネルへ Webhook で投稿し、processed へ移す](figs/one-run.svg)
+![タスクスケジューラが dispatch.py を 2 分おきに起動し、受付、開封、仕分けが順に動く。受付は Discord へ GET だけを出し、inbox に書き出す。開封は claims へ移し、仕分けは claude -p に指示して、最後の返答を確かめてから専用チャンネルへ Webhook で投稿し、processed へ移す](figs/one-run.svg)
 
 ## 1 回の起動で動くこと
 
 1. **受付**（`watcher/search.py`）: ボットのトークンで、Discord のサーバー内検索を引き、自分宛てのメンション（名指し、ping つきの返信、自分が持つロール宛て）を拾って、`inbox/` に 1 件ずつ置く。自分がもうスタンプを押した・返信した分は、ここで除く（下の「受付の動き」）。
 2. **開封**（`pipeline/tick.py`）: `inbox/` に新着があるときだけ、`claims/` に移して、仕分けに回す。Discord を読めない、Claude を呼べない、という状態が続いたら、専用チャンネルに知らせる。
-3. **仕分け**（`pipeline/run_claude.py`）: `claude -p` に、メンションと前後の会話を読ませ、結果を `drafts/` と `out/` に書かせる。書かれた投稿本文を Python の側で確かめてから、`pipeline/notify.py` が、専用チャンネルへ Webhook で投稿する。
+3. **仕分け**（`pipeline/run_claude.py`）: `claude -p` に、メンションと前後の会話を読ませ、控えを `drafts/` に書かせ、投稿本文を最後の返答で返させる。返答を Python の側で確かめてから、`pipeline/notify.py` が、専用チャンネルへ Webhook で投稿する。
 
 新着が無い回は、検索を引くだけで終わり、Claude は起動しない。PC がスリープしている間は止まり、起きた最初の回が、止まっていた間の分をまとめて拾う（最大 72 時間ぶん）。
 
@@ -52,7 +52,7 @@ Discord へ出す要求は、すべて GET。1 件ごとの取得に失敗した
 claude -p "Follow the task written on stdin." --model opus --effort xhigh
   --permission-mode dontAsk --permission-prompts none   （desktop_import: true のときは auto）
   --tools "Read,Grep,Glob,Edit,Write"
-  --allowedTools "Edit(//c/…/drafts/**)" "Edit(//c/…/out/**)"
+  --allowedTools "Edit(//c/…/drafts/**)"
   --disallowedTools "Read(//**/.env)" "Read(//**/*.env)"
   --add-dir <claims> [--add-dir <read_dirs と、その回の件の場所に当てた channel_read_dirs>…]
   --strict-mcp-config --disable-slash-commands --setting-sources project,local
@@ -61,6 +61,9 @@ claude -p "Follow the task written on stdin." --model opus --effort xhigh
 ```
 
 - 長い日本語の指示は**標準入力**で渡す（Windows ではコマンドライン引数の日本語が壊れる）。
+- **投稿本文は、Claude の最後の返答**（`--output-format json` の `result`）で受け取る。最後の行の `COUNTS …`（件数。通知を付けるかの判定と実行記録に使う）だけを外し、残りをそのまま投稿する。
+  セッションに残る最後の返答と、専用チャンネルに届く文面が同じものになるので、デスクトップ版でセッションを開けば、Discord を見なくても続きを相談できる
+  （[ADR-0037](adr/0037-reply-is-the-posted-text.md)）。投稿だけ失敗したときに送り直せるよう、Python が `out/` に控えてから送る。
 - **`--bare` は付けない。** 付けるとサブスクのログインを使わず、API キーが必要になる。
 - 許可していない操作は、聞かずに拒否される。拒否された数は実行記録に残る（`denials`）。初回の実行で、想定外の拒否が無いかを見る。
 - Claude が動いている間（最長 `claude_timeout_sec`、既定 30 分）、`dispatch.py` は終わらない。その間に起動された回は、何もせずに終わる。
@@ -174,7 +177,7 @@ claude -p "Follow the task written on stdin." --model opus --effort xhigh
 | `<名前>/claims/` | 仕分け中のメンション |
 | `<名前>/processed/` | 仕分けが済んだメンション |
 | `<名前>/drafts/` | 返信の下書きの控え |
-| `<名前>/out/` | 専用チャンネルへの投稿本文（Claude が書き、確かめてから投稿する） |
+| `<名前>/out/` | 専用チャンネルへの投稿本文の控え（Claude の最後の返答から Python が書く。投稿だけ失敗したときの送り直しに使い、成功したら消す） |
 | `<名前>/failed/` | 3 回失敗して、よけたメンション |
 | `<名前>/runs/` | 仕分けの記録（件数、かかった時間など。本文は入らない） |
 | `<名前>/state.json`、`poll.json` | 拾い済みの控えと、どこまで読んだか |

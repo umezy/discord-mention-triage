@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="326" viewBox="0 0 680 326" role="img" font-family="'Segoe UI','Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif">
+  <title>投稿本文は、仕分けの Claude の最後の返答で受け取る</title>
+  <desc>これまでは、仕分けの Claude が投稿本文を out/ のファイルに書き、Python がそのファイルを専用チャンネルへ送った。セッションの最後の返答は、COUNTS の 1 行だけで、届いた文面はセッションに見えなかった。これからは、Claude が投稿本文を最後の返答で返し、Python が COUNTS の行だけを外して送る。専用チャンネルに届く文面と、セッションに残る最後の返答が同じものになる。Claude が書けるのは drafts/ だけになり、送り直し用の控えは Python が out/ に書く。</desc>
+  <defs><marker id="a-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <rect width="680" height="326" fill="#FFFFFF"/>
+  <text x="15" y="20" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">これまで</text>
+  <rect x="15" y="58" width="220" height="60" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="125.0" y="79.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">仕分けの Claude</text>
+  <text x="125.0" y="100.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">投稿本文を out/ のファイルに書く</text>
+  <rect x="445" y="36" width="220" height="48" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="555.0" y="52.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">Discord の専用チャンネル</text>
+  <text x="555.0" y="70.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">ファイルの文面が届く</text>
+  <rect x="445" y="92" width="220" height="48" rx="8" fill="#FAECE7" stroke="#D85A30" stroke-width="0.5"/>
+  <text x="555.0" y="108.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">セッションの最後の返答</text>
+  <text x="555.0" y="126.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">「COUNTS draft=1 …」の 1 行だけ</text>
+  <path d="M235 88 L300 88 L300 60 L443 60" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <path d="M300 88 L300 116 L443 116" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <text x="372.0" y="50" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">Python がファイルを送る</text>
+  <text x="372.0" y="106" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">最後の返答</text>
+  <text x="15" y="166" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">これから</text>
+  <rect x="15" y="204" width="220" height="60" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="125.0" y="225.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">仕分けの Claude</text>
+  <text x="125.0" y="246.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">投稿本文を最後の返答で返す</text>
+  <rect x="445" y="182" width="220" height="48" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="555.0" y="198.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">Discord の専用チャンネル</text>
+  <text x="555.0" y="216.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">返答と同じ文面が届く</text>
+  <rect x="445" y="238" width="220" height="48" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="555.0" y="254.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">セッションの最後の返答</text>
+  <text x="555.0" y="272.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">届いた文面がそのまま読める</text>
+  <path d="M235 234 L300 234 L300 206 L443 206" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <path d="M300 234 L300 262 L443 262" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <text x="370.0" y="196" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">COUNTS 行を外して送る</text>
+  <text x="372.0" y="252" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">そのまま残る</text>
+  <text x="340.0" y="308" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">Claude が書けるのは drafts/ だけになる。送り直し用の控えは、Python が out/ に書く</text>
+</svg>

@@ -37,13 +37,13 @@
 | MCP / スキル | `--strict-mcp-config` `--disable-slash-commands` | メール・カレンダー等のコネクタは使えない |
 | 設定の読み込み | `--setting-sources project,local` | 個人の `~/.claude/settings.json` の許可ルールやフックを持ち込まない |
 | 読める場所 | `--add-dir` で claims/ と `read_dirs`、その回の件の場所に当てた `channel_read_dirs` だけ。`.env` は明示的に拒否 | トークンや Webhook URL を読めない |
-| 書ける場所 | `Edit(...)` の許可が `drafts/` と `out/` の下だけ | 他のファイルは作れない・変えられない |
+| 書ける場所 | `Edit(...)` の許可が `drafts/` の下だけ。投稿本文は、ファイルではなく最後の返答で受け取る（[ADR-0037](adr/0037-reply-is-the-posted-text.md)） | 他のファイルは作れない・変えられない |
 | 聞かれたとき | `--permission-mode dontAsk --permission-prompts none` | 許可が無い操作は、聞かずに拒否（記録に `denials` として残る）。**デスクトップ版へ取り込む設定（`desktop_import: true`）のときだけ `auto`**: 許可が無い操作は、断る代わりに、自動モードの判定に任せる（[ADR-0033](adr/0033-auto-mode-when-importing.md)） |
 | 認証 | 長期トークンだけ。`ANTHROPIC_API_KEY` 等は子プロセスの環境から外す | 意図せず API 課金になるのを防ぐ |
 | セッション記録 | `keep_transcripts`（`init` が書く設定は `true`） | `true` なら、本文を含む記録が `~/.claude/projects/` に残り、30 日で自動で消える。`false` なら `--no-session-persistence` を付け、残さない |
 
-Webhook URL は Claude には渡さない。投稿はこのリポジトリの Python（`notify.py`）が、Claude が書いた投稿本文のファイルを確認してから行う。
-Claude が不正な指示に従ってしまった場合でも、できるのは「`drafts/` と `out/` に変な内容のファイルを書く」ことまでで、
+Webhook URL は Claude には渡さない。投稿はこのリポジトリの Python（`notify.py`）が、Claude の最後の返答（投稿本文）を確認してから行う。
+Claude が不正な指示に従ってしまった場合でも、できるのは「`drafts/` に変な内容のファイルを書く」「変な投稿本文を返す」ことまでで、
 外に出るのは本人専用チャンネルへの投稿だけ（本人が目で見る）。取り込む設定（`auto`）のときは、ほかの場所の読み書きも、自動モードの判定が通せば起きうる。Bash もネットワークも無いので、外に出る道は同じ。
 
 ## PR の自動レビューは、いまは無効
