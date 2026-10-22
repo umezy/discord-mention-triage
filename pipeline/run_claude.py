@@ -9,7 +9,8 @@
      （セッションの最後の返答と、届く文面が同じものになる。本人がセッションだけで続きを相談できるように。ADR-0037）
   4. 成功したら claim を processed/ へ。失敗したら claim を残して、数分後に tick が戻して再試行させる
 
-同じ流れの続きの件は、前のセッションに書き足して仕分ける（--resume <前の ID>。ADR-0038）。前のセッションを、いま動いている
+同じ流れの続きの件は、前のセッションに書き足して仕分ける（--resume <前の ID>。ADR-0038）。前のセッションを、デスクトップ版の
+待機中の裏の処理が開いていて、画面には出ていなければ、その処理を終わらせてから書き足す（ADR-0039）。それ以外で、いま動いている
 Claude Code が開いているときなどは、前の会話を写した新しいセッションで仕分ける（--fork-session。ADR-0036。continuation.py）。
 
 Claude に与える権限は最小限:
@@ -316,25 +317,33 @@ def build_prompt(watcher, files, drafts_file: Path, now: datetime, continued: bo
     return text
 
 
-def continue_mode(cfg, session_id: str, name: str, view, holder=continuation.holder) -> tuple:
-    """同じ流れの続きを、どう続けるか（ADR-0038）。(続け方, 写す理由, 開いている処理の様子) を返す。
+def continue_mode(cfg, session_id: str, name: str, view, run_dir, holder=None, release=None) -> tuple:
+    """同じ流れの続きを、どう続けるか（ADR-0038、ADR-0039）。(続け方, 写す理由, 開いている処理の様子) を返す。
     続け方は "append" = 前のセッションに書き足す / "fork" = 前の会話を写した新しいセッション。写す理由と様子は、実行記録に書く。
 
-    書き足すのは、前のセッションを、いま動いている Claude Code が開いていないときだけ（理由 "held"）。裏の処理が動いている間に
-    書き足すと、デスクトップ版は書き足した分を読まず、本人が次に話すと記録が枝分かれする。
-    取り込む設定のときは、デスクトップ版の一覧に出ていること（アーカイブされていない）も条件にする（理由は listed の結果:
+    名前が控えに無い（古い形の）ときは写す（理由 "no_name"。名前の 1 通を送れないので）。
+    取り込む設定のときは、デスクトップ版の一覧に出ていること（アーカイブされていない）を条件にする（理由は listed の結果:
     "archived" / "missing" / "unknown"）。本人がしまったセッションに書き足しても、目に入らないので。
-    名前が控えに無い（古い形の）ときも写す（理由 "no_name"。名前の 1 通を送れないので）。"""
+    前のセッションを、いま動いている Claude Code が開いていれば、その間に書き足すと、デスクトップ版は書き足した分を読まず、
+    本人が次に話すと記録が枝分かれする。開いているのが、デスクトップ版の待機中の裏の処理だけで、そのセッションがいま画面に
+    出ていなければ、その処理を終わらせてから書き足す（ADR-0039）。終わらせなかった・終わらせられなかったときは写す（理由 "held"）。
+    どちらでも、様子に、終わらせたかどうか（release）を書く。"""
     if not name:
         return "fork", "no_name", {}
-    by = holder(session_id)
-    if by:
-        return "fork", "held", by
     if cfg.desktop_import:
         state = view.listed(session_id)
         if state != "listed":
             return "fork", state if state in ("archived", "missing", "unknown") else "unknown", {}
-    return "append", "", {}
+    by = (holder or continuation.holder)(session_id)
+    if not by:
+        return "append", "", {}
+    if not cfg.desktop_import:
+        by["release"] = "no_desktop"  # 取り込まない設定では、デスクトップ版のどのセッションが画面に出ているかを見ない
+    elif view.remember() == "local_" + session_id:
+        by["release"] = "on_screen"  # 本人がいま見ている。終わらせると、画面のそのセッションが止まる
+    else:
+        by["release"] = (release or continuation.release)(session_id, run_dir)
+    return ("append", "", by) if by["release"] == "ok" else ("fork", "held", by)
 
 
 def claimed_items(files) -> list:
@@ -516,7 +525,7 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
         if continued:
             view = view or desktop_view.DesktopView()
             try:
-                mode, why, by = continue_mode(cfg, continued, continuation.name_of(table, items), view)
+                mode, why, by = continue_mode(cfg, continued, continuation.name_of(table, items), view, home.root / "run")
             except Exception:  # noqa: BLE001 - 判定できなければ、前のセッションに触らない（写す）
                 mode, why, by = "fork", "error", {}
             summary.update(continued_from=continued, continue_mode=mode)

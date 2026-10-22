@@ -9,8 +9,10 @@
     続きと見なす（pick）。前のセッションの記録が消えていれば、続けない。
   * 続けるときは、前のセッションを、いま動いている Claude Code が開いていなければ（held）、`claude -p --resume <前の ID>` で、
     そのセッションに書き足す。デスクトップ版の一覧は、流れごとに 1 件のまま増えない（ADR-0038）。
-  * 開いていれば、`claude -p --resume <前の ID> --fork-session` で、前の会話を写した新しいセッションを作る。開いている間に
-    書き足すと、デスクトップ版は書き足した分を読まず、本人が次に話すと記録が枝分かれする（2026-10-16 と 2026-10-21 に確かめた）。
+  * 開いている間に書き足すと、デスクトップ版は書き足した分を読まず、本人が次に話すと記録が枝分かれする（2026-10-16、10-21、
+    10-22 に確かめた）。開いているのが、デスクトップ版の待機中の裏の処理だけなら、それを終わらせてから書き足す（release。ADR-0039）。
+    デスクトップ版は、次に話すときに処理を起動し直し、書き足した分まで読み直す（2026-10-22 に確かめた）。
+  * 終わらせられなければ、`claude -p --resume <前の ID> --fork-session` で、前の会話を写した新しいセッションを作る。
 
 セッション ID は、claude のコマンドライン引数になる（claude.cmd のときは、cmd.exe を通る）。決めた文字だけの ID しか使わない。
 """
@@ -86,16 +88,15 @@ def pid_alive(pid: int) -> bool:
 WORD_RE = re.compile(r"[a-z_-]{1,20}")
 
 
-def holder(session_id: str, env=None, alive=pid_alive, now: float | None = None) -> dict:
-    """そのセッションを、いま動いている Claude Code（デスクトップ版の裏の処理や、端末の claude）が開いていれば、その様子。
-    開いていなければ {}。様子は、実行記録（runs/）に書く: 状態（idle / busy など）・どこから動いているか・動き出してからの分・
-    状態が変わってからの分。決まった短い語と数だけで、本文や名前は入れない。
+def holders(session_id: str, env=None, alive=pid_alive) -> list:
+    """そのセッションを開いている、動いている Claude Code の印（<設定フォルダ>/sessions/<プロセス ID>.json の中身）。
 
-    Claude Code は、動いている間、<設定フォルダ>/sessions/<プロセス ID>.json に、開いているセッションの ID（sessionId）を書く。
+    Claude Code は、動いている間、この印に、開いているセッションの ID（sessionId）・プロセス ID（pid）・状態（status）・
+    どこから動いているか（entrypoint）・作業フォルダ（cwd）・プロセスの開始時刻（procStart）を書く。
     デスクトップ版は、セッションを開いただけ・取り込んだだけでも裏の処理を始め、終了・自動更新での再起動まで、何時間も動かしたままにする
     （2026-10-21 のデスクトップ版のログで確かめた。2.1.304）。
     Claude Code の中の形なので、変わって読めなくなったら、開いていないと見なす（書き足して、枝分かれしうる。ADR-0038）。"""
-    now = time.time() if now is None else now
+    found = []
     for path in (config_dir(env) / "sessions").glob("*.json"):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
@@ -104,10 +105,19 @@ def holder(session_id: str, env=None, alive=pid_alive, now: float | None = None)
         if not isinstance(data, dict) or data.get("sessionId") != session_id:
             continue
         try:
-            if not alive(int(data.get("pid") or 0)):
-                continue
+            if alive(int(data.get("pid") or 0)):
+                found.append(data)
         except (TypeError, ValueError):
             continue
+    return found
+
+
+def holder(session_id: str, env=None, alive=pid_alive, now: float | None = None) -> dict:
+    """そのセッションを、いま動いている Claude Code（デスクトップ版の裏の処理や、端末の claude）が開いていれば、その様子。
+    開いていなければ {}。様子は、実行記録（runs/）に書く: 状態（idle / busy など）・どこから動いているか・動き出してからの分・
+    状態が変わってからの分。決まった短い語と数だけで、本文や名前は入れない。"""
+    now = time.time() if now is None else now
+    for data in holders(session_id, env, alive):
         by = {k: str(data.get(k)) for k in ("status", "entrypoint") if WORD_RE.fullmatch(str(data.get(k) or ""))}
         for key, field in (("minutes", "startedAt"), ("status_minutes", "statusUpdatedAt")):
             at = data.get(field)
@@ -119,7 +129,87 @@ def holder(session_id: str, env=None, alive=pid_alive, now: float | None = None)
 
 def held(session_id: str, env=None, alive=pid_alive) -> bool:
     """そのセッションを、いま動いている Claude Code が開いているか（holder）。"""
-    return bool(holder(session_id, env, alive))
+    return bool(holders(session_id, env, alive))
+
+
+def created_at(pid: int) -> int | None:
+    """そのプロセスの開始時刻（Windows の FILETIME。100 ナノ秒単位）。Claude Code の印の procStart と同じ値。読めなければ None。
+    印が古いまま残り、同じプロセス ID が別のプロセスに使い回されたときに、そのプロセスを止めないために見る。"""
+    if os.name != "nt" or pid <= 0:
+        return None
+    from ctypes import wintypes
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+    handle = kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+    if not handle:
+        return None
+    try:
+        times = [wintypes.FILETIME() for _ in range(4)]  # 開始・終了・カーネル・ユーザー
+        if not kernel32.GetProcessTimes(handle, *(ctypes.byref(t) for t in times)):
+            return None
+        return (times[0].dwHighDateTime << 32) | times[0].dwLowDateTime
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+def end_tree(pid: int) -> bool:
+    """そのプロセスと、その子（MCP サーバーなど）を終わらせる。Windows だけ。"""
+    import subprocess
+    try:
+        proc = subprocess.run(["taskkill", "/PID", str(int(pid)), "/T", "/F"], capture_output=True, timeout=30,
+                              creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000))
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return proc.returncode == 0
+
+
+def same_dir(a, b) -> bool:
+    try:
+        return os.path.normcase(os.path.abspath(str(a))) == os.path.normcase(os.path.abspath(str(b)))
+    except (TypeError, ValueError):
+        return False
+
+
+RELEASE_WAIT_SEC = 10
+
+
+def release(session_id: str, run_dir, env=None, alive=pid_alive, created=created_at, end=end_tree,
+            sleep=time.sleep, clock=time.monotonic, wait_sec: float = RELEASE_WAIT_SEC, windows: bool | None = None) -> str:
+    """そのセッションを開いている、デスクトップ版の待機中の裏の処理を終わらせる（ADR-0039）。結果は実行記録に書く短い語:
+    ok（開いている処理は、もう無い）/ not_desktop / busy / other_dir / changed / end_failed / still_held / unsupported。
+
+    終わらせるのは、印が次をすべて満たす処理だけ。1 つでも満たさなければ、どれも終わらせない（呼んだ側は、写す）。
+      * デスクトップ版の裏の処理（entrypoint が claude-desktop）。端末で本人が動かしている claude は止めない。
+      * 待機中（status が idle）。返答の途中や、許可の確認を待っている処理は止めない。
+      * 作業フォルダ（cwd）が、仕分けの作業フォルダ（run_dir）。ほかのフォルダのセッションには触らない。
+      * 印のプロセスの開始時刻（procStart）が、いま動いているプロセスの開始時刻と同じ（プロセス ID の使い回しでない）。
+    デスクトップ版は、外から終わった処理を、そのセッションの query error としてログに残し、次に話すときに起動し直す。"""
+    if not (os.name == "nt" if windows is None else windows):
+        return "unsupported"
+    rows = holders(session_id, env, alive)
+    for data in rows:
+        if data.get("entrypoint") != "claude-desktop":
+            return "not_desktop"
+        if data.get("status") != "idle":
+            return "busy"
+        if not same_dir(data.get("cwd") or "", run_dir):
+            return "other_dir"
+        try:
+            pid, start = int(data.get("pid") or 0), int(str(data.get("procStart") or ""))
+        except (TypeError, ValueError):
+            return "changed"
+        if created(pid) != start:
+            return "changed"
+    for data in rows:
+        if not end(int(data["pid"])):
+            return "end_failed"
+    deadline = clock() + wait_sec
+    while holders(session_id, env, alive):
+        if clock() >= deadline:
+            return "still_held"
+        sleep(0.2)
+    return "ok"
 
 
 def pick(table: dict, items, exists=transcript_exists) -> str:

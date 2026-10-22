@@ -955,14 +955,14 @@ class Continuation(Base):
             res = run_claude.triage(self.home, cfg.watchers[0], cfg, files, now=NOW, poster=self.poster, **kw)
         return res, seen
 
-    def hold(self, session_id="sess-fake", pid=None):
+    def hold(self, session_id="sess-fake", pid=None, **extra):
         """Claude Code が、動いている間に書く印（<設定フォルダ>/sessions/<プロセス ID>.json）を置く。既定は、このテストのプロセス。"""
         pid = os.getpid() if pid is None else pid
         folder = self.claude_dir / "sessions"
         folder.mkdir(parents=True, exist_ok=True)
         (folder / ("%d.json" % pid)).write_text(
-            json.dumps({"pid": pid, "sessionId": session_id, "kind": "interactive", "entrypoint": "claude-desktop"}),
-            encoding="utf-8")
+            json.dumps(dict({"pid": pid, "sessionId": session_id, "kind": "interactive", "entrypoint": "claude-desktop"},
+                            **extra)), encoding="utf-8")
 
     def desktop_cfg(self):
         return config.parse({"state_root": self.cfg.state_root.as_posix(), "keep_transcripts": True,
@@ -1000,7 +1000,8 @@ class Continuation(Base):
         self.assertEqual(seen, [("alice「SECRET-BODY please」#dev（続き）", "sess-fake", "")])
         self.assertEqual(res["continue_mode"], "fork")
         self.assertEqual(res["fork_reason"], "held")
-        self.assertEqual(res["held_by"], {"entrypoint": "claude-desktop"})  # 時刻の無い印は、どこから動いているかだけ
+        # 時刻の無い印は、どこから動いているかだけ。取り込まない設定では、裏の処理を終わらせない（ADR-0039）
+        self.assertEqual(res["held_by"], {"entrypoint": "claude-desktop", "release": "no_desktop"})
         self.assertEqual(self.table()["20"]["name"], "alice「SECRET-BODY please」#dev（続き）")  # 次は、写した方に書き足す
 
     def test_a_previous_entry_without_a_name_is_copied(self):
@@ -1012,6 +1013,131 @@ class Continuation(Base):
         self.assertEqual(seen, [("alice「SECRET-BODY please」#dev（続き）", "sess-fake", "")])
         self.assertEqual(res["fork_reason"], "no_name")
         self.assertEqual(self.table()["20"]["name"], "alice「SECRET-BODY please」#dev（続き）")
+
+    def test_an_idle_desktop_process_is_ended_and_the_flow_is_added_to(self):
+        # デスクトップ版の待機中の裏の処理が開いていて、画面に出ていなければ、終わらせてから書き足す（ADR-0039）
+        cfg = self.desktop_cfg()
+        imports, released = [], []
+
+        def imp(*a, **k):
+            imports.append(a[1])
+            return "ok"
+
+        def rel(session_id, run_dir):
+            released.append((session_id, Path(run_dir)))
+            (self.claude_dir / "sessions" / ("%d.json" % os.getpid())).unlink()  # 終わった処理の印は、もう無い
+            return "ok"
+
+        self.run_once([self.claim_msg("a.json", 100)], cfg=cfg, import_fn=imp, view=FakeView())
+        self.transcript()
+        imports.clear()
+        self.hold(status="idle")
+        with mock.patch.object(run_claude.continuation, "release", side_effect=rel):
+            res, seen = self.run_once([self.claim_msg("b.json", 200, before=[100])], cfg=cfg, import_fn=imp,
+                                      view=FakeView())
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(released, [("sess-fake", self.home.root / "run")])  # 仕分けの作業フォルダを渡す
+        self.assertEqual(seen, [("", "", "sess-fake")])
+        self.assertEqual(res["continue_mode"], "append")
+        self.assertNotIn("fork_reason", res)
+        self.assertEqual(res["held_by"], {"status": "idle", "entrypoint": "claude-desktop", "release": "ok"})
+        self.assertEqual(imports, [])
+
+    def test_a_held_session_on_screen_or_not_released_is_copied(self):
+        cfg = self.desktop_cfg()
+        for case, viewed, result in (("on_screen", "local_sess-fake", "ok"), ("busy", "local_viewed", "busy"),
+                                     ("still_held", "local_viewed", "still_held")):
+            with self.subTest(case):
+                self.home.root.joinpath("sessions.json").write_text(json.dumps({"20": {
+                    "session_id": "sess-fake", "name": "alice「SECRET-BODY please」#dev", "message_ids": ["100"],
+                    "at": int(time.time())}}), encoding="utf-8")
+                self.transcript()
+                self.hold(status="idle")
+                calls = []
+                with mock.patch.object(run_claude.continuation, "release",
+                                       side_effect=lambda *a: calls.append(a) or result):
+                    res, seen = self.run_once([self.claim_msg("b-%s.json" % case, 200, before=[100])], cfg=cfg,
+                                              import_fn=lambda *a, **k: "ok", view=FakeView(viewed=viewed))
+                self.assertTrue(res["ok"], res)
+                self.assertEqual((res["continue_mode"], res["fork_reason"]), ("fork", "held"))
+                self.assertEqual(res["held_by"]["release"], case)
+                self.assertEqual(seen, [("alice「SECRET-BODY please」#dev（続き）", "sess-fake", "")])
+                self.assertEqual(len(calls), 0 if case == "on_screen" else 1)  # 本人が見ているセッションは、終わらせようとしない
+
+    def release_env(self, **extra):
+        """release の検査用の印。仕分けの作業フォルダで、待機中の、デスクトップ版の裏の処理（プロセス 4242、開始時刻 777）。"""
+        run_dir = self.home.root / "run"
+        fields = dict({"status": "idle", "cwd": str(run_dir), "procStart": "777"}, **extra)
+        self.hold("sess-fake", pid=4242, **fields)
+        return {"CLAUDE_CONFIG_DIR": str(self.claude_dir)}, run_dir
+
+    def test_release_ends_only_an_idle_desktop_process_of_the_triage_folder(self):
+        alive = {4242}
+        ended = []
+
+        def end(pid):
+            ended.append(pid)
+            alive.discard(pid)
+            return True
+
+        env, run_dir = self.release_env()
+        res = continuation.release("sess-fake", run_dir, env, alive=alive.__contains__, created={4242: 777}.get, end=end,
+                                   windows=True)
+        self.assertEqual((res, ended), ("ok", [4242]))
+        self.assertEqual(continuation.release("sess-fake", run_dir, env, alive=alive.__contains__, end=end,
+                                              windows=True), "ok")  # もう開いている処理が無い
+        self.assertEqual(continuation.release("sess-fake", run_dir, env, windows=False), "unsupported")
+
+    def test_release_leaves_every_other_process_alone(self):
+        cases = (
+            ({"status": "busy"}, "busy"),  # 返答の途中
+            ({"status": "waiting"}, "busy"),
+            ({"entrypoint": "cli"}, "not_desktop"),  # 端末で本人が動かしている claude
+            ({"cwd": "C:\\work\\other"}, "other_dir"),
+            ({"procStart": "778"}, "changed"),  # プロセス ID が使い回された
+            ({"procStart": None}, "changed"),
+        )
+        for extra, want in cases:
+            with self.subTest(want=want, extra=extra):
+                ended = []
+                env, run_dir = self.release_env(**extra)
+                res = continuation.release("sess-fake", run_dir, env, alive={4242}.__contains__, created={4242: 777}.get,
+                                           end=lambda pid: ended.append(pid) or True, windows=True)
+                self.assertEqual((res, ended), (want, []))
+
+    def test_release_ends_nothing_when_one_of_the_holders_must_stay(self):
+        ended = []
+        env, run_dir = self.release_env()
+        self.hold("sess-fake", pid=4243, status="busy", cwd=str(run_dir), procStart="888")
+        res = continuation.release("sess-fake", run_dir, env, alive={4242, 4243}.__contains__,
+                                   created={4242: 777, 4243: 888}.get, end=lambda pid: ended.append(pid) or True,
+                                   windows=True)
+        self.assertEqual((res, ended), ("busy", []))
+
+    def test_release_reports_a_process_that_would_not_end(self):
+        env, run_dir = self.release_env()
+        ticks = iter(range(100))
+        kw = dict(alive={4242}.__contains__, created={4242: 777}.get, windows=True, sleep=lambda s: None,
+                  clock=lambda: next(ticks), wait_sec=3)
+        self.assertEqual(continuation.release("sess-fake", run_dir, env, end=lambda pid: False, **kw), "end_failed")
+        self.assertEqual(continuation.release("sess-fake", run_dir, env, end=lambda pid: True, **kw), "still_held")
+
+    @unittest.skipUnless(os.name == "nt", "Windows only")
+    def test_end_tree_and_created_at_on_a_child_of_this_test(self):
+        # このテストが自分で起こしたプロセスだけを相手にする（ほかのプロセスには触らない）
+        child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+        try:
+            start = continuation.created_at(child.pid)
+            self.assertIsInstance(start, int)
+            self.assertGreater(start, 0)
+            self.assertTrue(continuation.pid_alive(child.pid))
+            self.assertTrue(continuation.end_tree(child.pid))
+            child.wait(timeout=10)
+            self.assertFalse(continuation.pid_alive(child.pid))
+        finally:
+            if child.poll() is None:
+                child.kill()
+        self.assertIsNone(continuation.created_at(0))
 
     def test_holder_reports_only_fixed_words_and_minutes(self):
         env = {"CLAUDE_CONFIG_DIR": str(self.claude_dir)}
