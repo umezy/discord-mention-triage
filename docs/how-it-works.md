@@ -90,6 +90,9 @@ claude -p "Follow the task written on stdin." --model opus --effort xhigh
   - 結果の投稿のあと、**名前だけの 1 通**を続けて送る（通知は付けない）。Discord で長押ししてテキストを写すと、名前がそのまま取れる。
     出先から、デスクトップ版の外で「この件の続き」を頼むときに、どのセッションかを正確に言うため。送れなくても、仕分けの成否には
     影響しない（実行記録の `name_post` に結果だけ残る）。
+  - `desktop_link_page` に中継ページの URL を書くと、名前の 1 通の下の行に `[デスクトップ版で開く](<ページ#local_<ID>>)` を足す（[ADR-0040](adr/0040-open-from-discord.md)）。
+    Discord は `claude://` をリンクにしないので、http(s) のページを挟み、ページ（`docs/open.html`）が `claude://code/continue?session=local_<ID>` を開く。
+    ページは `local_<UUID>` の形の ID だけを通し、ほかの `claude://` には飛ばない。ID は `#` の後ろに入れるので、ページの置き場には届かない。
   - `--desktop` は、**出力が画面（コンソール）に向いていないと動かない**（リダイレクトだと、すぐ終了コード 1）。無人の実行は入出力が
     NUL やログファイルなので、Windows では**非表示の本物のコンソールを新しく作って**その中で呼ぶ（`CREATE_NEW_CONSOLE` ＋ `SW_HIDE`）。
   - `conhost --headless` は使わない。入出力が NUL やファイルだと、**中身を起動せずに成功（0）を返し**、終了コードも返さないため。

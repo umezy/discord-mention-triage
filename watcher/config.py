@@ -58,6 +58,7 @@ class Config:
     claude_timeout_sec: int = 1800
     keep_transcripts: bool = False  # false = Claude のセッション記録（本文を含む）をディスクに残さない
     desktop_import: bool = False  # true = 仕分けのたびに、そのセッションをデスクトップ版の左側の一覧へ取り込む（keep_transcripts が前提）
+    desktop_link_page: str = ""  # 中継ページ（docs/open.html）の URL。書けば、名前の 1 通に、そのセッションを開くリンクを足す（ADR-0040）
     path: Path | None = None
 
 
@@ -79,6 +80,18 @@ def _choice(value, what: str) -> str:
     v = str(value)
     if not MODEL_RE.match(v):
         raise ConfigError(f"{what} に使えない文字がある: {v!r}")
+    return v
+
+
+PAGE_RE = re.compile(r"^https?://[^\s#<>()\[\]]+$")
+
+
+def _page(value) -> str:
+    """中継ページの URL。Discord がリンクにするのは http(s) だけ。後ろに #local_<ID> を足すので # は持たせず、
+    リンクの書式（[文字](<URL>)）を崩す記号も拒否する。"""
+    v = str(value or "").strip()
+    if v and not PAGE_RE.match(v):
+        raise ConfigError(f"desktop_link_page は http:// か https:// で始まり、# や空白を含まない URL で書く: {v!r}")
     return v
 
 
@@ -192,6 +205,7 @@ def parse(data: dict, path: Path | None = None) -> Config:
         claude_timeout_sec=int(data.get("claude_timeout_sec", 1800)),
         keep_transcripts=bool(data.get("keep_transcripts", False)),
         desktop_import=bool(data.get("desktop_import", False)),
+        desktop_link_page=_page(data.get("desktop_link_page")),
         path=path,
     )
 

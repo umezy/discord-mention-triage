@@ -56,6 +56,7 @@ class Base(unittest.TestCase):
         os.environ.pop("FAKE_CLAUDE_ERROR_TEXT", None)
         os.environ.pop("FAKE_CLAUDE_COUNTS", None)
         os.environ.pop("FAKE_CLAUDE_DIGEST", None)
+        os.environ.pop("FAKE_CLAUDE_SESSION_ID", None)
         self._tmp.cleanup()
 
     def poster(self, url, content, mention):
@@ -637,6 +638,45 @@ class DesktopImport(Base):
         self.assertEqual(res["name_post"], "ok")
         rec = (self.home.root / "runs").glob("*.json")
         self.assertNotIn("SECRET-BODY", next(rec).read_text(encoding="utf-8"))  # 名前には本文の頭が入る。記録には書かない
+
+    def test_the_name_message_links_to_the_relay_page_when_one_is_set(self):
+        # Discord は claude:// をリンクにしないので、中継ページへのリンクにする。ID は # の後ろ（ADR-0040）
+        sid = "0f1e2d3c-4b5a-4968-8778-695a4b3c2d1e"
+        os.environ["FAKE_CLAUDE_SESSION_ID"] = sid
+        res = self.run_triage(self.keep_cfg(desktop_link_page="https://example.github.io/t/open.html"), lambda *a, **k: "ok")
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(self.posts[1], ("alice「SECRET-BODY please」#dev\n[デスクトップ版で開く]"
+                                         "(<https://example.github.io/t/open.html#local_%s>)" % sid, ""))
+        self.assertEqual(res["name_post"], "ok")
+
+    def test_no_link_without_a_page(self):
+        os.environ["FAKE_CLAUDE_SESSION_ID"] = "0f1e2d3c-4b5a-4968-8778-695a4b3c2d1e"
+        res = self.run_triage(self.keep_cfg(), lambda *a, **k: "ok")
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(self.posts[1][0], "alice「SECRET-BODY please」#dev")
+
+    def test_no_link_for_a_session_id_of_another_form(self):
+        # 中継ページが通さない形の ID は、リンクにしない（押しても開かないリンクを送らない）
+        res = self.run_triage(self.keep_cfg(desktop_link_page="https://example.github.io/t/open.html"), lambda *a, **k: "ok")
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(self.posts[1][0], "alice「SECRET-BODY please」#dev")  # 偽の Claude の ID は sess-fake
+
+    def test_the_relay_page_url_is_checked_when_the_config_is_read(self):
+        base = {"state_root": self.cfg.state_root.as_posix(), "watchers": [{"name": "me", "user_id": "1"}]}
+        self.assertEqual(config.parse(base).desktop_link_page, "")
+        for ok in ("https://example.github.io/t/open.html", "http://localhost:8000/open.html?x=1"):
+            self.assertEqual(config.parse(dict(base, desktop_link_page=ok)).desktop_link_page, ok)
+        for bad in ("claude://code/continue", "javascript:alert(1)", "https://x/open.html#local_", "https://x/a b",
+                    "https://x/a>b", "open.html"):
+            with self.assertRaises(config.ConfigError, msg=bad):
+                config.parse(dict(base, desktop_link_page=bad))
+
+    def test_the_relay_page_opens_only_a_session_link(self):
+        page = (REPO / "docs" / "open.html").read_text(encoding="utf-8")
+        self.assertIn('"claude://code/continue?session=" + id', page)
+        # ページが通す ID の形は、リンクを作る側と同じ（local_ を付けたもの）
+        self.assertIn("/^local_%s/" % run_claude.desktop_view.SESSION_ID_RE.pattern[1:], page)
+        self.assertNotIn("src=", page)  # 外のスクリプトや画像を読まない
 
     def test_no_name_message_unless_the_session_is_imported(self):
         for kw in ({"desktop_import": False}, {"keep_transcripts": False}):

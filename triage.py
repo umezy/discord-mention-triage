@@ -169,6 +169,7 @@ def build_config(name: str, user_id: str, channel_id: str, read_dirs: list) -> d
         "claude_timeout_sec": 1800,
         "keep_transcripts": True,
         "desktop_import": False,
+        "desktop_link_page": "",
     }
 
 

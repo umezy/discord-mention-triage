@@ -26,5 +26,6 @@
   "claude_bin": "",
   "claude_timeout_sec": 1800,
   "keep_transcripts": true,
-  "desktop_import": false
+  "desktop_import": false,
+  "desktop_link_page": ""
 }

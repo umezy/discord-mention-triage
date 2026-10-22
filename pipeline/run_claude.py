@@ -610,7 +610,10 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
     if cfg.desktop_import and cfg.keep_transcripts and session_id and session_naming.safe(name):
         # 取り込むセッションの名前だけを、もう 1 通送る（通知は付けない）。長押しでそのまま写せるので、出先から「この件の続き」と
         # 頼むときに、どのセッションかを正確に言える。失敗しても仕分けは成功のまま。名前には本文の頭が入るので、記録には結果だけ書く
-        sent, name_line = notify.send(home, name, mention=False, poster=poster)
+        # 中継ページの URL が設定にあれば、PC の Discord から押すとデスクトップ版でそのセッションが開くリンクを、下の行に足す（ADR-0040）
+        link = desktop_view.page_link(cfg.desktop_link_page, session_id)
+        body = name + ("\n[デスクトップ版で開く](<%s>)" % link if link else "")
+        sent, name_line = notify.send(home, body, mention=False, poster=poster)
         summary["name_post"] = "ok" if sent else name_line
     if cfg.desktop_import and cfg.keep_transcripts and session_id and mode != "append":
         # 投稿のあと、成功した回だけ。結果は記録に残すが、失敗しても仕分けの成否には影響させない。

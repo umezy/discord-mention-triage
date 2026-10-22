@@ -14,6 +14,9 @@
 
 同じ流れの続きを、前のセッションに書き足すときは（ADR-0038）、そのセッションが一覧に出ているか（取り込まれていて、アーカイブされて
 いないか）を、同じ記録の isArchived で確かめる（listed）。
+
+名前の 1 通に足す「デスクトップ版で開く」リンクも作る（page_link。ADR-0040）。Discord は claude:// をリンクにしないので、
+中継ページ（docs/open.html）へのリンクにし、ページが同じ claude://code/continue?session=local_<ID> を開く。
 """
 
 from __future__ import annotations
@@ -28,6 +31,17 @@ FOCUSED_RE = re.compile(rb'"lastFocusedAt"\s*:\s*(\d+)')
 HEAD_BYTES = 16384  # lastFocusedAt は記録の頭の方にある。本文の入った大きい記録を、丸ごと読まない
 OPEN_WAIT_SEC = 30  # 取り込んだセッションが開くのを待つ上限
 POLL_SEC = 0.1
+# 中継ページが通すのと同じ形（docs/open.html）。claude -p のセッションの ID
+SESSION_ID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+
+
+def page_link(page: str, cli_session_id: str) -> str:
+    """中継ページで、そのセッションを開くリンク。ページの URL が無い、ID が決まった形でない、なら ""。
+
+    ID は # の後ろに入れる（ブラウザはページの置き場に送らない）。取り込んだセッションは local_<ID> でデスクトップ版に載る。"""
+    if not page or not SESSION_ID_RE.match(cli_session_id or ""):
+        return ""
+    return "%s#local_%s" % (page, cli_session_id)
 
 
 def sessions_root(env=None) -> Path | None:

@@ -70,7 +70,7 @@ if counts != "none":
     reply.append("COUNTS " + counts)
 
 print(json.dumps({
-    "type": "result", "is_error": mode == "iserror", "session_id": "sess-fake",
+    "type": "result", "is_error": mode == "iserror", "session_id": os.environ.get("FAKE_CLAUDE_SESSION_ID") or "sess-fake",
     "result": "\n".join(reply),
     "total_cost_usd": 0.0123, "permission_denials": [{"tool_name": "Bash"}],
     "usage": {"input_tokens": 2, "cache_creation_input_tokens": 9045, "cache_read_input_tokens": 9918, "output_tokens": 5,

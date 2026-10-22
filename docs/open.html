@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Claude で開く</title>
+<style>
+  body { font: 16px/1.6 system-ui, sans-serif; margin: 2rem 16px; color: #222; background: #fff; }
+  a { color: #1a5fb4; }
+</style>
+</head>
+<body>
+<!-- 中継ページ（ADR-0040）。Discord は claude:// をリンクにしないので、名前の 1 通には、このページへのリンクを載せる。
+     このページが、デスクトップ版でそのセッションを開くリンクを開く。置き場所の URL は、設定の desktop_link_page に書く -->
+<p id="msg">デスクトップ版の Claude で、セッションを開いています。</p>
+<p><a id="open" href="#" hidden>開かないときは、ここを押してください</a></p>
+<script>
+  // ID は # の後ろに入れる（ページの置き場に送られない）。決まった形の ID だけを通し、ほかの claude:// には飛ばさない
+  var id = location.hash.slice(1);
+  if (/^local_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id)) {
+    var url = "claude://code/continue?session=" + id;
+    var a = document.getElementById("open");
+    a.href = url;
+    a.hidden = false;
+    location.replace(url);
+  } else {
+    document.getElementById("msg").textContent = "リンクの形が違うので、開けません。";
+  }
+</script>
+</body>
+</html>
