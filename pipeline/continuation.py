@@ -83,24 +83,43 @@ def pid_alive(pid: int) -> bool:
         kernel32.CloseHandle(handle)
 
 
-def held(session_id: str, env=None, alive=pid_alive) -> bool:
-    """そのセッションを、いま動いている Claude Code（デスクトップ版の裏の処理や、端末の claude）が開いているか。
+WORD_RE = re.compile(r"[a-z_-]{1,20}")
+
+
+def holder(session_id: str, env=None, alive=pid_alive, now: float | None = None) -> dict:
+    """そのセッションを、いま動いている Claude Code（デスクトップ版の裏の処理や、端末の claude）が開いていれば、その様子。
+    開いていなければ {}。様子は、実行記録（runs/）に書く: 状態（idle / busy など）・どこから動いているか・動き出してからの分・
+    状態が変わってからの分。決まった短い語と数だけで、本文や名前は入れない。
 
     Claude Code は、動いている間、<設定フォルダ>/sessions/<プロセス ID>.json に、開いているセッションの ID（sessionId）を書く。
-    デスクトップ版は、話しかけたセッションの裏の処理を、しばらく（30 分近く経っても）動かしたままにする（2026-10-21 に確かめた。2.1.302）。
+    デスクトップ版は、セッションを開いただけ・取り込んだだけでも裏の処理を始め、終了・自動更新での再起動まで、何時間も動かしたままにする
+    （2026-10-21 のデスクトップ版のログで確かめた。2.1.304）。
     Claude Code の中の形なので、変わって読めなくなったら、開いていないと見なす（書き足して、枝分かれしうる。ADR-0038）。"""
+    now = time.time() if now is None else now
     for path in (config_dir(env) / "sessions").glob("*.json"):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             continue
-        if isinstance(data, dict) and data.get("sessionId") == session_id:
-            try:
-                if alive(int(data.get("pid") or 0)):
-                    return True
-            except (TypeError, ValueError):
+        if not isinstance(data, dict) or data.get("sessionId") != session_id:
+            continue
+        try:
+            if not alive(int(data.get("pid") or 0)):
                 continue
-    return False
+        except (TypeError, ValueError):
+            continue
+        by = {k: str(data.get(k)) for k in ("status", "entrypoint") if WORD_RE.fullmatch(str(data.get(k) or ""))}
+        for key, field in (("minutes", "startedAt"), ("status_minutes", "statusUpdatedAt")):
+            at = data.get(field)
+            if isinstance(at, (int, float)) and not isinstance(at, bool) and at > 0:
+                by[key] = max(0, int((now - at / 1000) // 60))  # ミリ秒
+        return by or {"status": "unknown"}
+    return {}
+
+
+def held(session_id: str, env=None, alive=pid_alive) -> bool:
+    """そのセッションを、いま動いている Claude Code が開いているか（holder）。"""
+    return bool(holder(session_id, env, alive))
 
 
 def pick(table: dict, items, exists=transcript_exists) -> str:

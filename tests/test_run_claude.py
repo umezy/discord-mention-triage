@@ -986,6 +986,9 @@ class Continuation(Base):
         rec = next((self.home.root / "runs").glob("*-%s.json" % res["run_id"])).read_text(encoding="utf-8")
         self.assertIn('"continued_from": "sess-fake"', rec)
         self.assertNotIn("SECRET-BODY", rec)
+        self.assertNotIn("fork_reason", res)  # 書き足した回には、写した理由は無い
+        # この回のトークン数（usage）。cost は、続けた回では前の回までの累計なので、1 回ぶんの重さはこちらで見る
+        self.assertEqual(json.loads(rec)["tokens"], {"in": 2, "cache_write": 9045, "cache_read": 9918, "out": 5})
 
     def test_a_session_open_in_a_running_claude_is_copied_instead(self):
         # デスクトップ版で話しかけたあと、裏の処理が動いている間に書き足すと、記録が枝分かれする（ADR-0038）
@@ -996,6 +999,8 @@ class Continuation(Base):
         self.assertTrue(res["ok"], res)
         self.assertEqual(seen, [("alice「SECRET-BODY please」#dev（続き）", "sess-fake", "")])
         self.assertEqual(res["continue_mode"], "fork")
+        self.assertEqual(res["fork_reason"], "held")
+        self.assertEqual(res["held_by"], {"entrypoint": "claude-desktop"})  # 時刻の無い印は、どこから動いているかだけ
         self.assertEqual(self.table()["20"]["name"], "alice「SECRET-BODY please」#dev（続き）")  # 次は、写した方に書き足す
 
     def test_a_previous_entry_without_a_name_is_copied(self):
@@ -1005,7 +1010,27 @@ class Continuation(Base):
         self.transcript()
         res, seen = self.run_once([self.claim_msg("b.json", 200, before=[100])])
         self.assertEqual(seen, [("alice「SECRET-BODY please」#dev（続き）", "sess-fake", "")])
+        self.assertEqual(res["fork_reason"], "no_name")
         self.assertEqual(self.table()["20"]["name"], "alice「SECRET-BODY please」#dev（続き）")
+
+    def test_holder_reports_only_fixed_words_and_minutes(self):
+        env = {"CLAUDE_CONFIG_DIR": str(self.claude_dir)}
+        folder = self.claude_dir / "sessions"
+        folder.mkdir(parents=True, exist_ok=True)
+        now = 1_800_000_000.0
+        folder.joinpath("1.json").write_text(json.dumps({
+            "pid": os.getpid(), "sessionId": "sess-fake", "status": "idle", "entrypoint": "claude-desktop",
+            "startedAt": (now - 3 * 3600) * 1000, "statusUpdatedAt": (now - 90) * 1000,
+            "name": "SECRET-BODY", "cwd": "C:\\x"}), encoding="utf-8")
+        alive = {os.getpid()}.__contains__
+        self.assertEqual(continuation.holder("sess-fake", env, alive=alive, now=now),
+                         {"status": "idle", "entrypoint": "claude-desktop", "minutes": 180, "status_minutes": 1})
+        self.assertEqual(continuation.holder("other", env, alive=alive, now=now), {})
+        # 決まった形でない値は書かない（名前や本文が紛れ込まないように）
+        folder.joinpath("1.json").write_text(json.dumps({
+            "pid": os.getpid(), "sessionId": "sess-fake", "status": "SECRET BODY 「x」", "startedAt": "soon"}),
+            encoding="utf-8")
+        self.assertEqual(continuation.holder("sess-fake", env, alive=alive, now=now), {"status": "unknown"})
 
     def test_held_reads_the_running_sessions_of_claude_code(self):
         env = {"CLAUDE_CONFIG_DIR": str(self.claude_dir)}
@@ -1044,6 +1069,7 @@ class Continuation(Base):
                                           import_fn=imp, view=view)
                 self.assertTrue(res["ok"], res)
                 self.assertEqual(res["continue_mode"], mode)
+                self.assertEqual(res.get("fork_reason"), None if mode == "append" else state)
                 self.assertIn(("listed", "sess-fake"), view.calls)
                 # 書き足した回は取り込まない（表示が移らない）。名前の 1 通は、書き足したセッションの名前で送る
                 self.assertEqual(imports, [] if mode == "append" else ["sess-fake"])

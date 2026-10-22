@@ -316,18 +316,25 @@ def build_prompt(watcher, files, drafts_file: Path, now: datetime, continued: bo
     return text
 
 
-def continue_mode(cfg, session_id: str, name: str, view, held=continuation.held) -> str:
-    """同じ流れの続きを、どう続けるか（ADR-0038）。"append" = 前のセッションに書き足す / "fork" = 前の会話を写した新しいセッション。
+def continue_mode(cfg, session_id: str, name: str, view, holder=continuation.holder) -> tuple:
+    """同じ流れの続きを、どう続けるか（ADR-0038）。(続け方, 写す理由, 開いている処理の様子) を返す。
+    続け方は "append" = 前のセッションに書き足す / "fork" = 前の会話を写した新しいセッション。写す理由と様子は、実行記録に書く。
 
-    書き足すのは、前のセッションを、いま動いている Claude Code が開いていないときだけ。デスクトップ版で話しかけたあとの、
-    裏の処理が動いている間に書き足すと、デスクトップ版は書き足した分を読まず、本人が次に話すと記録が枝分かれする。
-    取り込む設定のときは、デスクトップ版の一覧に出ていること（アーカイブされていない）も条件にする。本人がしまったセッションに
-    書き足しても、目に入らないので。名前が控えに無い（古い形の）ときも写す（名前の 1 通を送れないので）。"""
-    if not name or held(session_id):
-        return "fork"
-    if cfg.desktop_import and view.listed(session_id) != "listed":
-        return "fork"
-    return "append"
+    書き足すのは、前のセッションを、いま動いている Claude Code が開いていないときだけ（理由 "held"）。裏の処理が動いている間に
+    書き足すと、デスクトップ版は書き足した分を読まず、本人が次に話すと記録が枝分かれする。
+    取り込む設定のときは、デスクトップ版の一覧に出ていること（アーカイブされていない）も条件にする（理由は listed の結果:
+    "archived" / "missing" / "unknown"）。本人がしまったセッションに書き足しても、目に入らないので。
+    名前が控えに無い（古い形の）ときも写す（理由 "no_name"。名前の 1 通を送れないので）。"""
+    if not name:
+        return "fork", "no_name", {}
+    by = holder(session_id)
+    if by:
+        return "fork", "held", by
+    if cfg.desktop_import:
+        state = view.listed(session_id)
+        if state != "listed":
+            return "fork", state if state in ("archived", "missing", "unknown") else "unknown", {}
+    return "append", "", {}
 
 
 def claimed_items(files) -> list:
@@ -388,10 +395,24 @@ def run_process(cmd, prompt: str, cwd: Path, timeout: int, env: dict | None = No
         return -1, out.decode("utf-8", "replace"), err.decode("utf-8", "replace"), True
 
 
+TOKEN_KEYS = (("in", "input_tokens"), ("cache_write", "cache_creation_input_tokens"),
+              ("cache_read", "cache_read_input_tokens"), ("out", "output_tokens"))
+
+
+def tokens_of(usage) -> dict | None:
+    """結果の usage（この回の呼び出しぶんだけ。続けた回でも、前の回の分は入らない）から、トークン数だけを取り出す。
+    前の会話が長い流れでは、間が空くと cache_write（読み直し）が大きくなる。"""
+    if not isinstance(usage, dict):
+        return None
+    out = {short: usage[key] for short, key in TOKEN_KEYS
+           if isinstance(usage.get(key), int) and not isinstance(usage.get(key), bool)}
+    return out or None
+
+
 def parse_result(stdout: str) -> dict:
     """claude -p --output-format json の結果から、本文を含まない指標と、最後の返答（投稿本文。実行記録には書かない）を取り出す。"""
     info = {"is_error": None, "cost": None, "denials": 0, "counts": None, "text": "", "reply": "", "session_id": None,
-            "api_error": ""}
+            "api_error": "", "tokens": None}
     try:
         data = json.loads(stdout)
     except ValueError:
@@ -402,7 +423,9 @@ def parse_result(stdout: str) -> dict:
         return info
     info["is_error"] = data.get("is_error")
     info["session_id"] = data.get("session_id")
+    # total_cost_usd は、--resume で続けた回では、前の回までの合計を含む（セッションの累計）。1 回ぶんの重さは usage で見る
     info["cost"] = data.get("total_cost_usd")
+    info["tokens"] = tokens_of(data.get("usage"))
     denials = data.get("permission_denials")
     info["denials"] = len(denials) if isinstance(denials, list) else 0
     info["text"] = str(data.get("result", ""))[:300]  # 失敗の分類に使う。記録に書くのは never_ran のときだけ
@@ -493,10 +516,14 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
         if continued:
             view = view or desktop_view.DesktopView()
             try:
-                mode = continue_mode(cfg, continued, continuation.name_of(table, items), view)
+                mode, why, by = continue_mode(cfg, continued, continuation.name_of(table, items), view)
             except Exception:  # noqa: BLE001 - 判定できなければ、前のセッションに触らない（写す）
-                mode = "fork"
+                mode, why, by = "fork", "error", {}
             summary.update(continued_from=continued, continue_mode=mode)
+            if why:  # 写した理由と、開いていた処理の様子（あとで、なぜ「（続き）」が増えたかを、記録だけで追えるように）
+                summary["fork_reason"] = why
+            if by:
+                summary["held_by"] = by
         if mode == "append":
             name = continuation.name_of(table, items)
         else:
@@ -518,6 +545,8 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
         )
         info = parse_result(stdout)
         summary.update(counts=info["counts"], cost=info["cost"], denials=info["denials"])
+        if info["tokens"]:
+            summary["tokens"] = info["tokens"]
         if cfg.keep_transcripts and info["session_id"]:
             # 記録を残す設定のときだけ。`claude --resume <ID>` や `claude --desktop --resume <ID>` で中身を見られる
             session_id = str(info["session_id"])
@@ -645,7 +674,7 @@ def finish_blocked(home, files, summary, poster, started, reason: str) -> dict:
 
 
 def write_summary(home, summary: dict, started: float) -> None:
-    """実行の記録。本文は含めない（理由・件数・費用の目安・拒否された操作の数だけ）。
+    """実行の記録。本文は含めない（理由・件数・費用の目安・この回のトークン数・拒否された操作の数・続け方と写した理由だけ）。
     モデルが動く前のエラー（never_ran）に限り、Claude Code のエラー文の先頭も残す。"""
     try:
         runs = home.root / "runs"
