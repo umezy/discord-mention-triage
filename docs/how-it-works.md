@@ -53,14 +53,19 @@ claude -p "Follow the task written on stdin." --model opus --effort xhigh
   --permission-mode dontAsk --permission-prompts none   （desktop_import: true のときは auto）
   --tools "Read,Grep,Glob,Edit,Write"
   --allowedTools "Edit(//c/…/drafts/**)"
-  --disallowedTools "Read(//**/.env)" "Read(//**/*.env)"
-  --add-dir <claims> [--add-dir <read_dirs と、その回の件の場所に当てた channel_read_dirs>…]
-  --strict-mcp-config --disable-slash-commands --setting-sources project,local
+  --disallowedTools "Read(//**/.env)" "Read(//**/*.env)" "Edit(<作業フォルダ>/**)" "Edit(<--add-dir の各フォルダ>/**)"…
+  --add-dir <claims> [--add-dir <read_dirs と、その回の件の場所に当てた channel_read_dirs と、選んだ環境の足すフォルダ>…]
+  --strict-mcp-config --disable-slash-commands --setting-sources 
   --output-format json --no-session-persistence
   （記録を残す設定で、同じ流れの続きの回は --no-session-persistence の代わりに --resume <前の ID>。写すときは --fork-session も）
 ```
 
 - 長い日本語の指示は**標準入力**で渡す（Windows ではコマンドライン引数の日本語が壊れる）。
+- **作業フォルダ**は、ふだんは `<ホーム>/run`。`pick_environment: true` のときは、仕分けの前に、同じモデルに件を読ませ、デスクトップ版の「環境を選択」に並ぶ環境
+  （`ccd-session-presets.json`）から 1 つ選ばせて、その環境の作業フォルダで起動する。合う環境が無ければ、関連するフォルダ（`read_dirs` と `channel_read_dirs` のフォルダと、
+  それらや環境のフォルダと同じ親に並ぶ git のリポジトリ）から選ばせ、そのフォルダで起動する。選ぶ回は道具なし・設定なし・記録なしで、答えは一覧の名前・フォルダか `none` だけ受け付ける。
+  選べなければ run で動く。同じ流れの続きは、選び直さず、前のセッションの環境で動く。設定ファイルは読まないので、環境の CLAUDE.md は、指示文で読ませる
+  （`pipeline/environments.py`、[ADR-0042](adr/0042-run-in-the-chosen-environment.md)）。
 - **投稿本文は、Claude の最後の返答**（`--output-format json` の `result`）で受け取る。最後の行の `COUNTS …`（件数。通知を付けるかの判定と実行記録に使う）だけを外し、残りをそのまま投稿する。
   投稿は 1 件ずつ別のメッセージで、各件の 1 行目（題）は「返信ドラフト」「スタンプで十分」「対応不要」のどれか（PR のレビュー依頼は「返信ドラフト」）。
   全体の見出しや件数のまとめは付けない。

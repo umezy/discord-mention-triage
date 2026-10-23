@@ -159,6 +159,7 @@ def build_config(name: str, user_id: str, channel_id: str, read_dirs: list) -> d
             "include_everyone": False,
             "read_dirs": read_dirs,
             "channel_read_dirs": {},
+            "pick_environment": False,
             "triage_model": "opus",
             "triage_effort": "xhigh",
             "pr_policy": {"allowed_orgs": [], "requester_role_ids": [], "allow_bot_requesters": False},

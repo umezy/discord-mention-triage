@@ -10,7 +10,7 @@ FAKE_CLAUDE_MODE:
   limit     利用枠切れのエラーを返して終了コード 1
   notstarted  モデルが動く前のエラー（費用 0）を返して終了コード 1。文言は、認証切れにも利用枠切れにも当たらない
               （2026-10-05 に実機で出た形）。FAKE_CLAUDE_ERROR_TEXT があれば、エラー文をそれに差し替える
-FAKE_CLAUDE_ARGV_OUT があれば、受け取った引数と標準入力の長さを JSON で書き出す。
+FAKE_CLAUDE_ARGV_OUT があれば、受け取った引数・作業フォルダ・標準入力を JSON で書き出す。
 FAKE_CLAUDE_COUNTS があれば、COUNTS 行の中身をそれにする（例: "draft=0 stamp=0 skip=2 pr=0"。"none" なら COUNTS 行を出さない）。
 FAKE_CLAUDE_DIGEST があれば、返答の投稿本文をそれにする。
 """
@@ -27,7 +27,8 @@ prompt = sys.stdin.buffer.read().decode("utf-8")
 out_path = os.environ.get("FAKE_CLAUDE_ARGV_OUT")
 if out_path:
     with open(out_path, "w", encoding="utf-8") as f:
-        json.dump({"argv": sys.argv[1:], "stdin_chars": len(prompt), "stdin_head": prompt[:40],
+        json.dump({"argv": sys.argv[1:], "stdin_chars": len(prompt), "stdin_head": prompt[:40], "cwd": os.getcwd(),
+                   "stdin": prompt,
                    "oauth_token": os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"),
                    "discord_token_present": "DISCORD_BOT_TOKEN" in os.environ,
                    "api_key_present": "ANTHROPIC_API_KEY" in os.environ,

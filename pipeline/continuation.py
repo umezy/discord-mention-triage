@@ -182,7 +182,8 @@ def release(session_id: str, run_dir, env=None, alive=pid_alive, created=created
     終わらせるのは、印が次をすべて満たす処理だけ。1 つでも満たさなければ、どれも終わらせない（呼んだ側は、写す）。
       * デスクトップ版の裏の処理（entrypoint が claude-desktop）。端末で本人が動かしている claude は止めない。
       * 待機中（status が idle）。返答の途中や、許可の確認を待っている処理は止めない。
-      * 作業フォルダ（cwd）が、仕分けの作業フォルダ（run_dir）。ほかのフォルダのセッションには触らない。
+      * 作業フォルダ（cwd）が、仕分けの作業フォルダ（run_dir。環境で動かしたセッションなら、その環境の作業フォルダ。ADR-0042）。
+        ほかのフォルダのセッションには触らない。
       * 印のプロセスの開始時刻（procStart）が、いま動いているプロセスの開始時刻と同じ（プロセス ID の使い回しでない）。
     デスクトップ版は、外から終わった処理を、そのセッションの query error としてログに残し、次に話すときに起動し直す。"""
     if not (os.name == "nt" if windows is None else windows):
@@ -234,8 +235,16 @@ def name_of(table: dict, items) -> str:
     return str(entry.get("name") or "") if isinstance(entry, dict) else ""
 
 
-def record(home, items, session_id: str, continued_from: str = "", now: float | None = None, name: str = "") -> None:
-    """仕分けに成功したセッションを、場所ごとに控える。続けた回は、前の控えのメッセージ ID も引き継ぐ。"""
+def environment_of(table: dict, items):
+    """続ける前のセッションを動かした環境（environments.Environment.to_json の形）。run で動かしたとき・古い形の控えには無い（None）。"""
+    entry = table.get(next(iter(places(items)), ""))
+    return entry.get("environment") if isinstance(entry, dict) else None
+
+
+def record(home, items, session_id: str, continued_from: str = "", now: float | None = None, name: str = "",
+           environment: dict | None = None) -> None:
+    """仕分けに成功したセッションを、場所ごとに控える。続けた回は、前の控えのメッセージ ID も引き継ぐ。
+    environment は、そのセッションを動かした環境（ADR-0042）。続きの回も、同じ環境で動かすために控える。"""
     if not valid_id(session_id):
         return
     now = time.time() if now is None else now
@@ -246,6 +255,8 @@ def record(home, items, session_id: str, continued_from: str = "", now: float | 
         ids += [str(i.get("message_id")) for i in items if str(i.get("channel_id") or "") == place and i.get("message_id")]
         table[place] = {"session_id": session_id, "name": name, "message_ids": list(dict.fromkeys(ids))[-KEEP_IDS:],
                         "at": int(now)}
+        if environment:
+            table[place]["environment"] = environment
     table = {k: v for k, v in table.items() if isinstance(v, dict) and now - float(v.get("at") or 0) < KEEP_SEC}
     write_json_atomic(Path(home.root) / FILE, table)
 

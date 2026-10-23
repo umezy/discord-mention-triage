@@ -26,6 +26,8 @@
 
 {{DIRS_NOTE}}
 
+{{ENV_NOTE}}
+
 {{CONTINUE_NOTE}}
 
 ## 判断

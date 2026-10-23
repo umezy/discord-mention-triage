@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-16
+amended-by: [ADR-0042]
 ---
 
 # ADR-0033: デスクトップ版へ取り込む設定のときは、仕分けを「自動」モードで動かす
@@ -43,4 +44,6 @@ date: 2026-10-16
 - この ADR が一部を変えた ADR:
   - [ADR-0005](0005-minimal-claude-permissions.md): 「許可していない操作は、聞かずに拒否する」は、取り込む設定のときは当たらない
   - [ADR-0009](0009-import-sessions-into-desktop.md): 「取り込み後の許可の初期値は未確認」は、記録に残ったモードになる、と確かめた
+- 一部を変えた ADR:
+  - [ADR-0042](0042-run-in-the-chosen-environment.md): 作業フォルダと、`--add-dir` で足したフォルダへの書き込みは、自動モードの判定に任せず、拒否のルールで止める
 - 関連: [security.md](../security.md)、[しくみ](../how-it-works.md)

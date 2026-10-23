@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-03
-amended-by: [ADR-0012, ADR-0033, ADR-0034, ADR-0037]
+amended-by: [ADR-0012, ADR-0033, ADR-0034, ADR-0037, ADR-0042]
 ---
 
 # ADR-0005: 仕分けの Claude に渡す権限を最小にする
@@ -44,4 +44,5 @@ amended-by: [ADR-0012, ADR-0033, ADR-0034, ADR-0037]
   - [ADR-0033](0033-auto-mode-when-importing.md): デスクトップ版へ取り込む設定（`desktop_import: true`）のときは、`--permission-mode auto` で動かす。許可の外の操作は、聞かずに拒否する代わりに、自動モードの判定に任せる。道具と書き込みの許可は同じ
   - [ADR-0034](0034-per-channel-read-dirs.md): 読める場所に、届いた件の場所に当てたフォルダ（`channel_read_dirs`）が加わる
   - [ADR-0037](0037-reply-is-the-posted-text.md): 書ける場所は `drafts/` だけになった。投稿本文は、ファイルではなく最後の返答で受け取り、Python が確かめてから投稿する
+  - [ADR-0042](0042-run-in-the-chosen-environment.md): 設定ファイルを読まない（`--setting-sources` が空）。読める場所に、選んだ環境の作業フォルダと足すフォルダが加わる。作業フォルダと足したフォルダへの書き込みは、明示的に拒否する
 - 関連: [security.md](../security.md)、[しくみ](../how-it-works.md)

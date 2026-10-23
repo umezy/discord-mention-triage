@@ -43,6 +43,8 @@ class WatchedUser:
     read_dirs: tuple = ()  # 事実確認のために Claude が読んでよい手元のリポジトリ（読み取りのみ）
     # ((チャンネルの ID, (フォルダ, ...)), ...)。その場所の件が来た回だけ、read_dirs に足す。ID は、スレッドの親でもよい
     channel_read_dirs: tuple = ()
+    # true = 仕分けの前に、デスクトップ版の環境の一覧から件に合うものを選ばせ、その環境で動かす（ADR-0042）
+    pick_environment: bool = False
     triage_model: str = "opus"
     triage_effort: str = "xhigh"
 
@@ -189,6 +191,7 @@ def parse(data: dict, path: Path | None = None) -> Config:
                 pr_policy=policy,
                 read_dirs=tuple(str(d) for d in w.get("read_dirs", [])),
                 channel_read_dirs=_channel_dirs(w.get("channel_read_dirs"), name),
+                pick_environment=bool(w.get("pick_environment", False)),
                 triage_model=_choice(w.get("triage_model", "opus"), "triage_model"),
                 triage_effort=_choice(w.get("triage_effort", "xhigh"), "triage_effort"),
             )

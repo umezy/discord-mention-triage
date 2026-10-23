@@ -575,7 +575,7 @@ class DesktopImport(Base):
     def test_imports_the_session_after_the_digest_is_posted(self):
         calls = []
 
-        def fake_import(claude, session_id, home, env=None):
+        def fake_import(claude, session_id, home, env=None, cwd=None):
             calls.append((session_id, len(self.posts)))  # 呼ばれた時点で、結果の投稿は済んでいる
             return "ok"
 
@@ -931,7 +931,7 @@ class ChannelDirs(Base):
     def test_triage_adds_the_folders_of_the_claimed_items(self):
         seen = []
 
-        def fake_build(claude, cfg, watcher, home, session_name="", extra_dirs=(), fork_from="", append_to=""):
+        def fake_build(claude, cfg, watcher, home, session_name="", extra_dirs=(), fork_from="", append_to="", **kw):
             seen.append(list(extra_dirs))
             return FAKE
 
@@ -988,7 +988,7 @@ class Continuation(Base):
         cfg = cfg or self.cfg
         seen = []
 
-        def fake_build(claude, cfg, watcher, home, session_name="", extra_dirs=(), fork_from="", append_to=""):
+        def fake_build(claude, cfg, watcher, home, session_name="", extra_dirs=(), fork_from="", append_to="", **kw):
             seen.append((session_name, fork_from, append_to))
             return FAKE
 
@@ -1389,6 +1389,171 @@ class ClaudeBin(unittest.TestCase):
     def test_not_found(self):
         with tempfile.TemporaryDirectory() as d:
             self.assertIsNone(claude_bin.find_claude("", appdata=d, env={"PATH": ""}, home=d))
+
+
+class Environments(Base):
+    """件に合う環境を選ばせ、その環境の作業フォルダで動かす（environments.py、ADR-0042）。選ぶ係は偽物。"""
+
+    def setUp(self):
+        super().setUp()
+        root = Path(self._tmp.name)
+        outside = tempfile.TemporaryDirectory()  # 環境のフォルダは、状態のフォルダの外にしか置けない
+        self.addCleanup(outside.cleanup)
+        self.proj, self.lib = Path(outside.name) / "proj", Path(outside.name) / "lib"
+        self.proj.mkdir()
+        self.lib.mkdir()
+        self.work = run_claude.environments.Environment("Work", str(self.proj), (str(self.lib),))
+        self.argv_out = root / "argv.json"
+        os.environ["FAKE_CLAUDE_ARGV_OUT"] = str(self.argv_out)
+        self.picked = []
+
+    def pick_cfg(self, pick=True, **kw):
+        return config.parse(dict({"state_root": self.cfg.state_root.as_posix(), "keep_transcripts": True,
+                                  "watchers": [{"name": "me", "user_id": "1", "pick_environment": pick}]}, **kw))
+
+    def picker(self, chosen):
+        def pick(envs, folders, items):
+            self.picked.append(([e.name for e in envs], [f.folder for f in folders], [i.get("message_id") for i in items]))
+            return chosen, 0.02
+        return pick
+
+    def run_pick(self, cfg, chosen=None, envs=None, name="pending-e.json", **kw):
+        envs = [self.work] if envs is None else envs
+        return run_claude.triage(self.home, cfg.watchers[0], cfg, [self.claim(name)], command=FAKE, now=NOW, poster=self.poster,
+                                 environments_fn=lambda: envs, picker=self.picker(chosen), **kw)
+
+    def claim(self, name="pending-a.json", **kw):
+        path = self.home.claims / name
+        path.write_text(json.dumps({"items": [dict(item(**kw), channel_id="20")]}), encoding="utf-8")
+        return path
+
+    def seen(self):
+        return json.loads(self.argv_out.read_text(encoding="utf-8"))
+
+    def test_the_chosen_environment_is_the_working_folder(self):
+        res = self.run_pick(self.pick_cfg(), chosen=self.work)
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(self.picked, [(["Work"], [], ["1"])])
+        self.assertEqual(os.path.normcase(self.seen()["cwd"]), os.path.normcase(str(self.proj)))
+        self.assertIn("この回の環境", self.seen()["stdin"])
+        self.assertIn(str(self.lib), self.seen()["stdin"])
+        self.assertEqual((res["environment"], res["environment_by"], res["pick_cost"]), ("Work", "picked", 0.02))
+        rec = json.loads(next((self.home.root / "runs").glob("*.json")).read_text(encoding="utf-8"))
+        self.assertEqual((rec["environment"], rec["environment_by"]), ("Work", "picked"))
+
+    def test_nothing_chosen_runs_in_the_run_folder(self):
+        res = self.run_pick(self.pick_cfg(), chosen=None)
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(os.path.normcase(self.seen()["cwd"]), os.path.normcase(str(self.home.root / "run")))
+        self.assertNotIn("この回の環境", self.seen()["stdin"])
+        self.assertEqual(res["environment_by"], "none")
+        self.assertNotIn("environment", res)
+
+    def test_without_a_fitting_environment_a_related_folder_is_used(self):
+        cfg = config.parse({"state_root": self.cfg.state_root.as_posix(), "keep_transcripts": True,
+                            "watchers": [{"name": "me", "user_id": "1", "pick_environment": True, "read_dirs": [str(self.lib)]}]})
+        folder = run_claude.environments.Environment("", str(self.lib))
+        res = self.run_pick(cfg, chosen=folder)
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(self.picked[0][1], [str(self.lib)])  # 設定で読ませているフォルダが、関連するフォルダに並ぶ
+        self.assertEqual(os.path.normcase(self.seen()["cwd"]), os.path.normcase(str(self.lib)))
+        self.assertIn("この回の作業フォルダ", self.seen()["stdin"])
+        self.assertEqual((res["environment"], res["environment_by"]), ("lib", "folder"))
+
+    def test_no_list_means_no_pick(self):
+        res = self.run_pick(self.pick_cfg(), chosen=self.work, envs=[])
+        self.assertTrue(res["ok"], res)
+        self.assertEqual((self.picked, res["environment_by"]), ([], "no_list"))
+
+    def test_nothing_is_picked_unless_asked(self):
+        res = self.run_pick(self.pick_cfg(pick=False), chosen=self.work)
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(self.picked, [])
+        self.assertNotIn("environment_by", res)
+        self.assertEqual(os.path.normcase(self.seen()["cwd"]), os.path.normcase(str(self.home.root / "run")))
+
+    def test_the_import_runs_in_the_chosen_folder(self):
+        calls = []
+        res = self.run_pick(self.pick_cfg(desktop_import=True), chosen=self.work,
+                            import_fn=lambda *a, **k: calls.append(k.get("cwd")) or "ok", view=FakeView())
+        self.assertTrue(res["ok"], res)
+        self.assertEqual([os.path.normcase(str(c)) for c in calls], [os.path.normcase(str(self.proj))])
+
+    def test_the_environment_is_kept_for_the_follow_ups(self):
+        self.run_pick(self.pick_cfg(), chosen=self.work)
+        self.assertEqual(continuation.load(self.home)["20"]["environment"], self.work.to_json())
+
+    def test_a_retried_post_keeps_the_environment(self):
+        self.post_fails = True
+        self.assertEqual(self.run_pick(self.pick_cfg(), chosen=self.work)["reason"], "post_failed")
+        self.post_fails = False
+        res = self.run_pick(self.pick_cfg(), chosen=None)  # 投稿だけやり直す回は、選び直さない
+        self.assertEqual((res["reason"], len(self.picked)), ("reused_digest", 1))
+        self.assertEqual(continuation.load(self.home)["20"]["environment"], self.work.to_json())
+
+
+class EnvironmentFollowUps(Continuation):
+    """同じ流れの続きは、選び直さず、前のセッションの環境で動かす（ADR-0042）。"""
+
+    def test_a_follow_up_runs_in_the_previous_environment_without_picking(self):
+        root = Path(self._tmp.name)
+        outside = tempfile.TemporaryDirectory()
+        self.addCleanup(outside.cleanup)
+        proj = Path(outside.name) / "proj"
+        proj.mkdir()
+        work = run_claude.environments.Environment("Work", str(proj))
+        cfg = config.parse({"state_root": str(root), "keep_transcripts": True,
+                            "watchers": [{"name": "me", "user_id": "1", "pick_environment": True}]})
+        seen, picks = [], []
+
+        def fake_build(claude, cfg, watcher, home, workdir=None, **kw):
+            seen.append(str(workdir))
+            return FAKE
+
+        def picker(envs, folders, items):
+            picks.append(1)
+            return work, 0.01
+
+        def once(path):
+            with mock.patch.object(run_claude.claude_bin, "find_claude", return_value="CLAUDE"), \
+                    mock.patch.object(run_claude, "build_command", side_effect=fake_build):
+                return run_claude.triage(self.home, cfg.watchers[0], cfg, [path], now=NOW, poster=self.poster,
+                                         environments_fn=lambda: [work], picker=picker)
+
+        self.assertTrue(once(self.claim_msg("a.json", 100))["ok"])
+        self.transcript()
+        res = once(self.claim_msg("b.json", 200, before=[100]))
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(res["continue_mode"], "append")
+        self.assertEqual((res["environment"], res["environment_by"]), ("Work", "continued"))
+        self.assertEqual(picks, [1])  # 選んだのは、初めの回だけ
+        self.assertEqual(seen, [str(proj)] * 2)
+
+
+class EnvironmentCommand(Base):
+    """環境で動かすときも、書けるのは drafts/ だけ。設定ファイルは読まない（ADR-0042）。"""
+
+    def test_working_and_added_folders_are_readable_but_not_writable(self):
+        root = Path(self._tmp.name)
+        c = run_claude.build_command("CLAUDE", self.cfg, self.watcher, self.home, extra_dirs=[str(root / "docs")],
+                                     workdir=root / "proj", env_dirs=(str(root / "lib"),))
+        dirs = [c[i + 1] for i, x in enumerate(c) if x == "--add-dir"]
+        self.assertEqual(dirs, [str(self.home.claims), str(root / "repo"), str(root / "docs"), str(root / "lib")])
+        denied = c[c.index("--disallowedTools") + 1: c.index("--add-dir")]
+        for d in (root / "proj", self.home.claims, root / "repo", root / "docs", root / "lib"):
+            self.assertIn("Edit(%s/**)" % run_claude.rule_path(d), denied)
+        self.assertNotIn("Edit(%s/**)" % run_claude.rule_path(self.home.drafts), denied)
+        self.assertEqual(c[c.index("--allowedTools") + 1], "Edit(%s/**)" % run_claude.rule_path(self.home.drafts))
+        self.assertEqual(c[c.index("--setting-sources") + 1], "")
+
+    def test_the_run_folder_is_the_default_and_is_not_writable_either(self):
+        c = run_claude.build_command("CLAUDE", self.cfg, self.watcher, self.home)
+        self.assertIn("Edit(%s/**)" % run_claude.rule_path(self.home.root / "run"), c)
+
+    def test_a_folder_holding_drafts_is_added_but_not_denied(self):
+        c = run_claude.build_command("CLAUDE", self.cfg, self.watcher, self.home, extra_dirs=[str(self.home.root)])
+        self.assertIn(str(self.home.root), c)
+        self.assertNotIn("Edit(%s/**)" % run_claude.rule_path(self.home.root), c)
 
 
 if __name__ == "__main__":

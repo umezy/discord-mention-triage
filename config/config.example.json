@@ -12,6 +12,7 @@
       "include_everyone": false,
       "read_dirs": ["C:/path/to/a/repo/claude/may/read/to/check/facts"],
       "channel_read_dirs": {},
+      "pick_environment": false,
       "triage_model": "opus",
       "triage_effort": "xhigh",
       "pr_policy": {

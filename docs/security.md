@@ -35,10 +35,11 @@
 |---|---|---|
 | 使える道具 | `--tools Read,Grep,Glob,Edit,Write` | Bash・PowerShell・ネットワーク・サブエージェント・スキルは存在しない |
 | MCP / スキル | `--strict-mcp-config` `--disable-slash-commands` | メール・カレンダー等のコネクタは使えない |
-| 設定の読み込み | `--setting-sources project,local` | 個人の `~/.claude/settings.json` の許可ルールやフックを持ち込まない |
-| 読める場所 | `--add-dir` で claims/ と `read_dirs`、その回の件の場所に当てた `channel_read_dirs` だけ。`.env` は明示的に拒否 | トークンや Webhook URL を読めない |
-| 書ける場所 | `Edit(...)` の許可が `drafts/` の下だけ。投稿本文は、ファイルではなく最後の返答で受け取る（[ADR-0037](adr/0037-reply-is-the-posted-text.md)） | 他のファイルは作れない・変えられない |
+| 設定の読み込み | `--setting-sources` に何も渡さない | 個人の `~/.claude/settings.json` や、環境のフォルダの設定にある許可ルール・フックを持ち込まない。環境の CLAUDE.md は、指示文で、道具で読ませる（[ADR-0042](adr/0042-run-in-the-chosen-environment.md)） |
+| 読める場所 | 作業フォルダ（選んだ環境か、関連するフォルダ）と、`--add-dir` で claims/ と `read_dirs`、その回の件の場所に当てた `channel_read_dirs`、選んだ環境の足すフォルダだけ。`.env` は明示的に拒否 | トークンや Webhook URL を読めない |
+| 書ける場所 | `Edit(...)` の許可が `drafts/` の下だけ。投稿本文は、ファイルではなく最後の返答で受け取る（[ADR-0037](adr/0037-reply-is-the-posted-text.md)）。作業フォルダと `--add-dir` のフォルダへの書き込みは、`--disallowedTools` の `Edit(...)` で明示的に拒否する | 他のファイルは作れない・変えられない。環境のフォルダ（プロジェクトのリポジトリ）で動かしても、そこには書けない |
 | 聞かれたとき | `--permission-mode dontAsk --permission-prompts none` | 許可が無い操作は、聞かずに拒否（記録に `denials` として残る）。**デスクトップ版へ取り込む設定（`desktop_import: true`）のときだけ `auto`**: 許可が無い操作は、断る代わりに、自動モードの判定に任せる（[ADR-0033](adr/0033-auto-mode-when-importing.md)） |
+| 環境を選ぶ回 | `pick_environment: true` のとき、仕分けの前に、同じモデルを `--tools ""`・設定なし・記録なしで 1 回動かし、環境の名前（合う環境が無ければ、関連するフォルダ）だけを答えさせる | 一覧に無い答えは使わない。選べるのは本人のデスクトップ版の環境と、設定で足したフォルダの周りのリポジトリだけ（[ADR-0042](adr/0042-run-in-the-chosen-environment.md)） |
 | 認証 | 長期トークンだけ。`ANTHROPIC_API_KEY` 等は子プロセスの環境から外す | 意図せず API 課金になるのを防ぐ |
 | セッション記録 | `keep_transcripts`（`init` が書く設定は `true`） | `true` なら、本文を含む記録が `~/.claude/projects/` に残り、30 日で自動で消える。`false` なら `--no-session-persistence` を付け、残さない |
 

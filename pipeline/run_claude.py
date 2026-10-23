@@ -14,14 +14,21 @@
 待機中の裏の処理が開いていて、画面には出ていなければ、その処理を終わらせてから書き足す（ADR-0039）。それ以外で、いま動いている
 Claude Code が開いているときなどは、前の会話を写した新しいセッションで仕分ける（--fork-session。ADR-0036。continuation.py）。
 
+pick_environment の設定のときは、仕分けの前に、件に合う環境（デスクトップ版の「環境を選択」に並ぶ、フォルダの組）を選ばせ、
+その環境の作業フォルダで動かす（environments.py。ADR-0042）。合う環境が無ければ、関連するフォルダから選ばせる。
+どれも選べなければ、これまでどおり <ホーム>/run で動かす。
+
 Claude に与える権限は最小限:
   * 使える道具は Read / Grep / Glob / Edit / Write だけ（--tools）。Bash・ネットワーク・MCP・スキルは無し
-  * 読めるのは claims/ と、設定した read_dirs と、届いた件の場所に当てた channel_read_dirs だけ（--add-dir）。.env は明示的に拒否
-  * 書けるのは drafts/ の下だけ（Edit の許可ルール）
+  * 読めるのは、作業フォルダと、claims/ と、設定した read_dirs と、届いた件の場所に当てた channel_read_dirs と、選んだ環境の
+    足すフォルダだけ（--add-dir）。.env は明示的に拒否
+  * 書けるのは drafts/ の下だけ（Edit の許可ルール）。作業フォルダと --add-dir のフォルダへの書き込みは、明示的に拒否する
+  * 設定ファイル（settings.json）は読まない（--setting-sources に何も渡さない）。環境のフォルダの設定にあるフックや許可ルールを
+    持ち込まないため。環境の CLAUDE.md は、指示文で、道具で読ませる
   * 許可が無い操作は聞かずに拒否（--permission-mode dontAsk --permission-prompts none）
   * ただし、デスクトップ版へ取り込む設定のときは、「自動」モード（auto）で動かす。取り込んだセッションは、記録に残った
     モードで開くので、続きを話すときに断られないように（ADR-0033）。このときは、上の範囲の外の読み書きを、断らずに、
-    自動モードの判定に任せる。道具・許可ルール・.env の拒否は同じ
+    自動モードの判定に任せる（作業フォルダと --add-dir のフォルダへの書き込みの拒否は効く）。道具・許可ルール・.env の拒否は同じ
 Webhook URL は Claude には渡さない。投稿はこのスクリプトが行う。
 
 注意: --bare は付けない。付けるとサブスクのログインを使わず、API キーが必要になる。
@@ -46,6 +53,7 @@ from watcher.store import read_json, write_json_atomic  # noqa: E402
 import claude_bin  # noqa: E402
 import continuation  # noqa: E402
 import desktop_view  # noqa: E402
+import environments  # noqa: E402
 import notify  # noqa: E402
 import session_naming  # noqa: E402
 import tick  # noqa: E402
@@ -97,8 +105,14 @@ def channel_dirs(watcher, files) -> list:
     return [(cid, tuple(expand_dir(d) for d in table[cid])) for cid in hit]
 
 
+def contains(parent, child) -> bool:
+    a = os.path.normcase(os.path.abspath(str(parent))).rstrip("\\/")
+    b = os.path.normcase(os.path.abspath(str(child))).rstrip("\\/")
+    return a == b or b.startswith(a + os.sep)
+
+
 def build_command(claude: str, cfg, watcher, home, session_name: str = "", extra_dirs=(), fork_from: str = "",
-                  append_to: str = "") -> list:
+                  append_to: str = "", workdir=None, env_dirs=()) -> list:
     """claude -p の引数。長い日本語の指示は引数に載せず、標準入力で渡す（Windows の引数は日本語が壊れる）。
 
     session_name は、記録を残すときだけ付ける。デスクトップ版の左側で、誰の、何の件かが分かるようにする（session_naming.py）。
@@ -110,7 +124,14 @@ def build_command(claude: str, cfg, watcher, home, session_name: str = "", extra
     extra_dirs は、この回の件の場所に当てたフォルダ（channel_dirs）。read_dirs と同じく、読むためだけに足す。
     fork_from は、続ける前のセッションの ID（continuation.pick）。その会話を写した新しいセッションで動かす（ADR-0036）。
     append_to は、書き足す前のセッションの ID（continue_mode が "append" のとき。ADR-0038）。名前は付け直さない（session_name は渡さない）。
-    どちらでも、道具・許可は、続けないときと同じ。"""
+    どちらでも、道具・許可は、続けないときと同じ。
+    workdir は、claude を起動する作業フォルダ（既定は <ホーム>/run）。環境を選んだ回は、その環境の作業フォルダ。env_dirs は、
+    その環境の足すフォルダ（ADR-0042）。作業フォルダと、足したフォルダ（claims/ も）への書き込みは、拒否のルールで止める。
+    自動モードでも、拒否のルールは効く（2026-10-23 に小さいモデルで確かめた）。drafts/ を含むフォルダは、drafts/ まで止まるので、拒否しない。
+    設定ファイルは読まない。環境のフォルダの設定にあるフックは、`--setting-sources project,local` だと仕分けの中で動く（2026-10-23 に確かめた）。"""
+    workdir = home.root / "run" if workdir is None else workdir
+    dirs = list(dict.fromkeys([str(home.claims), *(expand_dir(x) for x in (*watcher.read_dirs, *extra_dirs, *env_dirs))]))
+    guarded = [str(workdir), *dirs]
     cmd = [
         claude, "-p", "Follow the task written on stdin.",
         "--model", watcher.triage_model,
@@ -121,14 +142,14 @@ def build_command(claude: str, cfg, watcher, home, session_name: str = "", extra
         "--allowedTools",
         "Edit(%s/**)" % rule_path(home.drafts),
         "--disallowedTools", "Read(//**/.env)", "Read(//**/*.env)",
-        "--add-dir", str(home.claims),
+        *("Edit(%s/**)" % rule_path(d) for d in dict.fromkeys(guarded) if not contains(d, home.drafts)),
     ]
-    for d in dict.fromkeys(expand_dir(x) for x in (*watcher.read_dirs, *extra_dirs)):
+    for d in dirs:
         cmd += ["--add-dir", d]
     cmd += [
         "--strict-mcp-config",
         "--disable-slash-commands",
-        "--setting-sources", "project,local",
+        "--setting-sources", "",
         "--output-format", "json",
     ]
     if session_name and session_naming.safe(session_name):
@@ -218,17 +239,18 @@ def desktop_import_command(claude: str, session_id: str) -> list:
     return [claude, "--desktop", "--resume", session_id]
 
 
-def import_to_desktop(claude, session_id: str, home, env=None, timeout: int = DESKTOP_IMPORT_TIMEOUT_SEC) -> str:
+def import_to_desktop(claude, session_id: str, home, env=None, timeout: int = DESKTOP_IMPORT_TIMEOUT_SEC, cwd=None) -> str:
     """取り込みを試みる。**失敗しても仕分けは成功のまま**（見やすさのための機能なので、本筋を止めない）。
     戻り値は実行記録に書く短い文字列: ok / claude_not_found / timeout / error / exit_<コード>。
 
     `--desktop` は、出力が画面（コンソール）に向いていないと動かない（リダイレクトされていると、すぐ終了コード 1 で終わる）。
     無人の実行は入出力が NUL やログファイルなので、Windows では **非表示の本物のコンソールを新しく作って**、その中で動かす
     （入出力は渡さない）。`conhost --headless` は、入出力が NUL やファイルだと中身を起動せずに成功（0）を返す、
-    終了コードも返さない、ので使わない。"""
+    終了コードも返さない、ので使わない。
+    cwd は、仕分けを動かした作業フォルダ（環境を選んだ回は、その環境の作業フォルダ。ADR-0042）。"""
     if not claude:
         return "claude_not_found"
-    cwd = home.root / "run"
+    cwd = Path(cwd) if cwd else home.root / "run"
     cwd.mkdir(parents=True, exist_ok=True)
     kw = {}
     if os.name == "nt":
@@ -302,7 +324,19 @@ CONTINUE_NOTE = (
 )
 
 
-def build_prompt(watcher, files, drafts_file: Path, now: datetime, continued: bool = False) -> str:
+def env_note(environment) -> str:
+    """選んだ環境を、指示文に書く。設定ファイルは読ませないので、環境の CLAUDE.md は、ここで道具で読ませる（ADR-0042）。"""
+    if environment is None:
+        return ""
+    dirs = "".join("、`%s`" % d for d in environment.add_dirs)
+    head = ("**この回の環境**: 「%s」。作業フォルダは `%s`%s です。" % (environment.name, environment.folder, dirs) if environment.name
+            else "**この回の作業フォルダ**: `%s`（この件に合う、関連するフォルダです）。" % environment.folder)
+    return head + ("事実の裏取りの前に、これらのフォルダの `CLAUDE.md`（あれば `.claude/CLAUDE.md` も）を読み、"
+                   "その決まりと言葉づかいを踏まえてください。"
+                   "そこに書かれた手順のうち、書き込み・コマンド・送信は、この仕分けではしません（読み取りのみ）。")
+
+
+def build_prompt(watcher, files, drafts_file: Path, now: datetime, continued: bool = False, environment=None) -> str:
     text = PROMPT_PATH.read_text(encoding="utf-8")
     subs = {
         "{{USER_NAME}}": watcher.name,
@@ -311,6 +345,7 @@ def build_prompt(watcher, files, drafts_file: Path, now: datetime, continued: bo
         "{{DRAFTS_FILE}}": p(drafts_file),
         "{{PR_NOTE}}": PR_NOTE if has_pr(files) else "",
         "{{DIRS_NOTE}}": dirs_note(channel_dirs(watcher, files)),
+        "{{ENV_NOTE}}": env_note(environment),
         "{{CONTINUE_NOTE}}": CONTINUE_NOTE if continued else "",
     }
     for k, v in subs.items():
@@ -492,9 +527,43 @@ def age_claims(files, now: float) -> None:
             pass
 
 
+def workdir_of(home, environment) -> Path:
+    """claude を起動する作業フォルダ。環境を選んだ回は、その環境の作業フォルダ（ADR-0042）。"""
+    return Path(environment.folder) if environment else home.root / "run"
+
+
+def choose_environment(home, watcher, cfg, items, summary, env, environments_fn=None, picker=None):
+    """件に合う環境を、仕分けと同じモデルに選ばせる（ADR-0042）。合う環境が無ければ、関連するフォルダから選ばせる。
+    選べなければ None（run で動かす）。失敗しても仕分けは止めない。
+    実行記録には、選んだ環境（フォルダなら、その名前）と、選び方（picked / folder / none / no_list）と、選ぶ回の費用を書く。"""
+    try:
+        envs = environments_fn() if environments_fn else environments.load(cfg.state_root)
+        folders = environments.candidate_folders(watcher, envs, cfg.state_root)
+    except Exception:  # noqa: BLE001 - 一覧が読めなければ、選ばない
+        envs, folders = [], []
+    if not envs and not folders:
+        summary["environment_by"] = "no_list"
+        return None
+    if picker is None:
+        def picker(envs, folders, items):
+            return environments.pick(claude_bin.find_claude(cfg.claude_bin), watcher.triage_model, watcher.triage_effort,
+                                     envs, items, home.root / "run", env=env, folders=folders)
+    try:
+        chosen, cost = picker(envs, folders, items)
+    except Exception:  # noqa: BLE001
+        chosen, cost = None, None
+    summary["pick_cost"] = cost
+    if chosen:
+        summary.update(environment=chosen.label, environment_by="picked" if chosen.name else "folder")
+    else:
+        summary["environment_by"] = "none"
+    return chosen
+
+
 def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = None, poster=notify.post,
-           import_fn=import_to_desktop, view=None) -> dict:
-    """仕分けを1回実行する。例外は投げず、結果の辞書を返す（ok / reason / counts / ...）。"""
+           import_fn=import_to_desktop, view=None, environments_fn=None, picker=None) -> dict:
+    """仕分けを1回実行する。例外は投げず、結果の辞書を返す（ok / reason / counts / ...）。
+    environments_fn() は環境の一覧、picker(環境, 関連するフォルダ, 件) は (選んだものか None, 費用) を返す（テストで差し替える。既定は environments.py）。"""
     now = now or datetime.now(JST)
     files = [Path(f) for f in files if Path(f).exists()]
     if not files:
@@ -522,6 +591,7 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
         summary["counts"] = meta.get("counts")  # 通知するかどうかの判定に使う。古い形の控えには無い（そのときは通知する）
         continued = str(meta.get("continued_from") or "")
         mode = str(meta.get("continue_mode") or "")
+        environment = environments.from_json(meta.get("environment"), cfg.state_root)
         summary["reason"] = "reused_digest"
     else:
         drafts_file = home.drafts / f"{now.astimezone(JST):%Y%m%d-%H%M%S}-{rid}.md"
@@ -532,10 +602,16 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
         table = continuation.load(home) if cfg.keep_transcripts else {}
         continued = continuation.pick(table, items) if cfg.keep_transcripts else ""
         mode = ""
+        environment = None
         if continued:
+            # 続きは、選び直さず、前のセッションの環境で動かす（ADR-0042）。その環境がもう使えなければ run で動かす
+            environment = environments.from_json(continuation.environment_of(table, items), cfg.state_root)
+            if environment:
+                summary.update(environment=environment.label, environment_by="continued")
             view = view or desktop_view.DesktopView()
             try:
-                mode, why, by = continue_mode(cfg, continued, continuation.name_of(table, items), view, home.root / "run")
+                mode, why, by = continue_mode(cfg, continued, continuation.name_of(table, items), view,
+                                              workdir_of(home, environment))
             except Exception:  # noqa: BLE001 - 判定できなければ、前のセッションに触らない（写す）
                 mode, why, by = "fork", "error", {}
             summary.update(continued_from=continued, continue_mode=mode)
@@ -551,17 +627,23 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
             claude = claude_bin.find_claude(cfg.claude_bin)
             if not claude:
                 return finish_failure(home, files, summary, "claude_not_found", poster, started)
-            extra = [d for _, dirs in channel_dirs(watcher, files) for d in dirs]
-            if mode == "append":
-                command = build_command(claude, cfg, watcher, home, extra_dirs=extra, append_to=continued)
-            else:
-                command = build_command(claude, cfg, watcher, home, session_name=name, extra_dirs=extra, fork_from=continued)
-        prompt = build_prompt(watcher, files, drafts_file, now, continued=bool(continued))
         env = child_env(home)
+        if not continued and watcher.pick_environment:
+            # 仕分けの前に、件に合う環境を選ばせる。作業フォルダは起動の前に決める必要がある（ADR-0042）
+            environment = choose_environment(home, watcher, cfg, items, summary, env, environments_fn, picker)
+        workdir = workdir_of(home, environment)
+        if claude:
+            extra = [d for _, dirs in channel_dirs(watcher, files) for d in dirs]
+            env_dirs = environment.add_dirs if environment else ()
+            if mode == "append":
+                command = build_command(claude, cfg, watcher, home, extra_dirs=extra, append_to=continued,
+                                        workdir=workdir, env_dirs=env_dirs)
+            else:
+                command = build_command(claude, cfg, watcher, home, session_name=name, extra_dirs=extra, fork_from=continued,
+                                        workdir=workdir, env_dirs=env_dirs)
+        prompt = build_prompt(watcher, files, drafts_file, now, continued=bool(continued), environment=environment)
         summary["auth"] = auth_source(env)
-        code, stdout, stderr, timed_out = run_process(
-            command, prompt, home.root / "run", cfg.claude_timeout_sec, env=env
-        )
+        code, stdout, stderr, timed_out = run_process(command, prompt, workdir, cfg.claude_timeout_sec, env=env)
         info = parse_result(stdout)
         summary.update(counts=info["counts"], cost=info["cost"], denials=info["denials"])
         if info["tokens"]:
@@ -591,7 +673,8 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
         digest_file.write_text(digest, encoding="utf-8")
         meta_file.write_text(json.dumps({"drafts_file": str(drafts_file), "session_id": session_id, "session_name": name,
                                          "counts": info["counts"], "continued_from": continued,
-                                         "continue_mode": mode}), encoding="utf-8")
+                                         "continue_mode": mode,
+                                         "environment": environment.to_json() if environment else None}), encoding="utf-8")
 
     body = digest_file.read_text(encoding="utf-8")
     mention = needs_mention(summary["counts"], body)
@@ -620,7 +703,8 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
     summary.update(ok=True, reason=summary["reason"] or "done", post=line)
     if cfg.keep_transcripts and session_id:
         try:
-            continuation.record(home, items, session_id, continued, name=name)  # 次の回が、この会話を引き継げるように
+            continuation.record(home, items, session_id, continued, name=name,  # 次の回が、この会話を引き継げるように
+                                environment=environment.to_json() if environment else None)
         except OSError:
             pass  # 控えられなくても、仕分けは成功のまま（次の回が、新しいセッションになるだけ）
     if cfg.desktop_import and cfg.keep_transcripts and session_id and mode != "append":
@@ -634,7 +718,8 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
             viewed = ""
         try:
             summary["desktop_import"] = import_fn(
-                claude or claude_bin.find_claude(cfg.claude_bin), session_id, home, child_env(home))
+                claude or claude_bin.find_claude(cfg.claude_bin), session_id, home, child_env(home),
+                cwd=workdir_of(home, environment))
         except Exception:  # noqa: BLE001
             summary["desktop_import"] = "error"
         if summary["desktop_import"] == "ok":
