@@ -3,7 +3,7 @@
 """仕分けを1回実行する。新着があるときだけ、dispatch.py が、その場で呼ぶ（別プロセスには切り離さない）。
 
 流れ:
-  1. claim 済みの pending-*.json をまとめて、`claude -p`（画面なしの Claude Code）に渡す
+  1. claim 済みの pending-*.json を、`claude -p`（画面なしの Claude Code）に渡す（dispatch.py は 1 件ずつ渡す。ADR-0041）
   2. Claude は「ドラフトの控え」のファイルを書き、最後の返答に「投稿本文」を書くだけ（Discord にも Webhook にも触れない）
   3. このスクリプトが控えと返答を確かめ、返答から COUNTS の行を外したものを、Webhook で本人専用チャンネルへ投稿する
      （セッションの最後の返答と、届く文面が同じものになる。本人がセッションだけで続きを相談できるように。ADR-0037）

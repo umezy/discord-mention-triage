@@ -4,12 +4,14 @@
 
 やること（1〜3 は AI なし。新着が無い回は、検索を数回引いて終わる）:
   1. 受付: Discord の検索を引いて、自分宛ての新着を inbox/ に書き出す（watcher/search.py。Discord へは GET だけ）
-  2. 途中で落ちた回の掃除と、inbox の claim
+  2. 途中で落ちた回の掃除と、inbox の claim（古い順に 1 件だけ。ADR-0041）
   3. 異常の通知（Discord を読めない状態が続いている、3 回失敗して退避した）
   4. claim できたものがあるときだけ、その場で Claude を 1 回動かして、結果を投稿する（run_claude.triage）
 
+1 回の起動で仕分けるのは 1 件だけ。別々のメンションを、届いた時刻が近いというだけで、同じセッションにしないため。
+同じ流れの続きの件は、次の回が、前の件のセッションに書き足す（continuation.py）。
 同時に動くのは 1 つだけ（ProcessLock）。Claude が動いている間（数分）に起動された回は、何もせずに終わる。
-その間の新着は、Claude が終わった次の回が、まとめて拾う。
+その間の新着は inbox に溜まり、Claude が終わったあとの回が、1 件ずつ仕分ける。
 
 使い方（タスクスケジューラ）:
   python -X utf8 pipeline/dispatch.py --user NAME
@@ -43,6 +45,7 @@ import tick  # noqa: E402
 from watcher import config as wconfig  # noqa: E402
 from watcher import search  # noqa: E402
 
+PER_RUN = 1  # 1 回の起動で claim する件数（ADR-0041）
 POLL_DOWN_SEC = 15 * 60  # Discord を読めない状態が、これだけ続いたら知らせる
 POLL_ALERT_COOLDOWN_SEC = 60 * 60
 RESIDENT_FRESH_SEC = 180  # 常駐版の受付は、30 秒おきに生存信号を書いていた。これより新しければ、まだ動いている
@@ -165,7 +168,7 @@ def run(args, runner=run_claude.triage, poster=notify.post, poller=poll_discord,
         # 2. 掃除と claim（認証切れ・枠切れの直後は、新しい仕分けを始めない。届いた分は inbox に溜めておく）
         until, blocked_reason = run_claude.blocked_state(home)
         blocked = until > now
-        got = tick.collect(home, now, dry_run, limit=0 if blocked else None)
+        got = tick.collect(home, now, dry_run, limit=0 if blocked else PER_RUN)
 
         # 3. 人手が要る状態の通知
         for name in got["failed"]:

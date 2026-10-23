@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="330" viewBox="0 0 680 330" role="img" font-family="'Segoe UI','Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif">
+  <title>1 回の仕分けで扱うメンションは 1 件</title>
+  <desc>これまでは、inbox に溜まった別々の場所の 2 件を、claude -p の 1 回でまとめて仕分け、セッションは 1 つで、名前は最初の件のものに「ほか1件」が付いた。これからは、1 回の起動で古い順に 1 件だけ取り、1 回目は #a の件でセッション A、次の起動の 2 回目は #b の件でセッション B になる。#a の件の続きが届いたら、次の回が、続きと見なしてセッション A に書き足す。</desc>
+  <defs><marker id="a-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <rect width="680" height="330" fill="#FFFFFF"/>
+  <text x="15" y="24" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">これまで</text>
+  <rect x="15" y="40" width="200" height="60" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="115.0" y="61.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">inbox に 2 件</text>
+  <text x="115.0" y="82.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">#a の件と、#b の件</text>
+  <rect x="245" y="40" width="200" height="60" rx="8" fill="#FAECE7" stroke="#D85A30" stroke-width="0.5"/>
+  <text x="345.0" y="61.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">claude -p を 1 回</text>
+  <text x="345.0" y="82.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">2 件をまとめて仕分ける</text>
+  <rect x="475" y="40" width="200" height="60" rx="8" fill="#FAECE7" stroke="#D85A30" stroke-width="0.5"/>
+  <text x="575.0" y="61.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">セッションは 1 つ</text>
+  <text x="575.0" y="82.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">名前は「#a の件 ほか1件」</text>
+  <path d="M215 70 L243 70" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <path d="M445 70 L473 70" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <text x="15" y="144" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">これから</text>
+  <rect x="15" y="160" width="200" height="110" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="115.0" y="204.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">inbox に 2 件</text>
+  <text x="115.0" y="226.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">1 回の起動で、古い順に 1 件</text>
+  <rect x="245" y="160" width="200" height="50" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="345.0" y="177.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">1 回目: #a の件</text>
+  <text x="345.0" y="196.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">claude -p を 1 回</text>
+  <rect x="245" y="220" width="200" height="50" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="345.0" y="237.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">2 回目: #b の件</text>
+  <text x="345.0" y="256.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">次の起動で、claude -p を 1 回</text>
+  <rect x="475" y="160" width="200" height="50" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="575.0" y="177.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">セッション A</text>
+  <text x="575.0" y="196.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">名前は「#a の件」</text>
+  <rect x="475" y="220" width="200" height="50" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="575.0" y="237.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">セッション B</text>
+  <text x="575.0" y="256.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">名前は「#b の件」</text>
+  <path d="M215 185 L243 185" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <path d="M215 245 L243 245" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <path d="M445 185 L473 185" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <path d="M445 245 L473 245" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <text x="340.0" y="298" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">#a の件の続きが届いたら、次の回が続きと見なして、セッション A に書き足す（ADR-0038）</text>
+  <text x="340.0" y="318" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">溜まった分は 1 件ずつ順に仕分けるので、届き終わるまでが延びる</text>
+</svg>

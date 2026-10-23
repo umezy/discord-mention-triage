@@ -87,13 +87,25 @@ class DispatchTest(Base):
 
     def test_new_mentions_are_claimed_and_triaged_in_the_same_run(self):
         self.put("pending-a.json")
-        self.put("pending-b.json")
-        self.poll_result = search.PollResult(found=2, emitted=2)
+        self.poll_result = search.PollResult(found=1, emitted=1)
         line, code = self.run_dispatch()
         self.assertEqual(code, 0)
-        self.assertEqual(line, "OK POLL=ok FOUND=2 EMITTED=2 CLAIMED=2 RAN=1 RESULT=done")
-        self.assertEqual(self.runs, [["pending-a.json", "pending-b.json"]])  # まとめて 1 回
+        self.assertEqual(line, "OK POLL=ok FOUND=1 EMITTED=1 CLAIMED=1 RAN=1 RESULT=done")
+        self.assertEqual(self.runs, [["pending-a.json"]])
         self.assertTrue((self.home.claims / "pending-a.json").exists())
+
+    def test_each_run_triages_only_the_oldest_mention(self):
+        # 別々のメンションを、同じ回に届いたというだけで、同じセッションにしない（ADR-0041）。残りは次の回へ
+        for name in ("pending-20261023-0701-b.json", "pending-20261023-0700-a.json", "pending-20261023-0702-c.json"):
+            self.put(name)
+        self.poll_result = search.PollResult(found=3, emitted=3)
+        self.assertEqual(self.run_dispatch()[0], "OK POLL=ok FOUND=3 EMITTED=3 CLAIMED=1 RAN=1 RESULT=done")
+        self.poll_result = search.PollResult()
+        for _ in range(3):
+            self.run_dispatch()
+        self.assertEqual(self.runs, [["pending-20261023-0700-a.json"], ["pending-20261023-0701-b.json"],
+                                     ["pending-20261023-0702-c.json"]])
+        self.assertEqual(self.run_dispatch()[0], "OK POLL=ok FOUND=0 EMITTED=0 CLAIMED=0 RAN=0")  # 空になったら、Claude は動かない
 
     def test_retried_and_skipped_counts_are_reported(self):
         self.poll_result = search.PollResult(found=4, emitted=0, retrying=1, skips={"replied": 1, "reacted": 2})
