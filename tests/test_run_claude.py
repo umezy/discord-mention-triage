@@ -1184,6 +1184,18 @@ class Continuation(Base):
         self.assertEqual(res["fork_reason"], "no_name")
         self.assertEqual(self.table()["20"]["name"], NAME + "（続き）")
 
+    def test_a_previous_entry_with_an_old_style_name_is_copied(self):
+        # ADR-0043 より前に、届いた件から作った名前（# を含む）。書き足すと、各件の名前の行もリンクも付かないので、写して控え直す
+        self.home.root.joinpath("sessions.json").write_text(json.dumps({"20": {
+            "session_id": "sess-fake", "name": "alice「来週の予定」#dev", "message_ids": ["100"], "at": int(time.time())}}),
+            encoding="utf-8")
+        self.transcript()
+        res, seen = self.run_once([self.claim_msg("b.json", 200, before=[100])])
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(seen, [(TEMP + "（続き）", "sess-fake", "")])
+        self.assertEqual((res["continue_mode"], res["fork_reason"]), ("fork", "old_name"))
+        self.assertEqual(self.table()["20"]["name"], NAME + "（続き）")
+
     def test_an_idle_desktop_process_is_ended_and_the_flow_is_added_to(self):
         # デスクトップ版の待機中の裏の処理が開いていて、画面に出ていなければ、終わらせてから書き足す（ADR-0039）
         cfg = self.desktop_cfg()
@@ -1467,6 +1479,7 @@ class Continuation(Base):
         args = (self.watcher, [f], self.home.drafts / "d.md", NOW)
         text = run_claude.build_prompt(*args, continued=True)
         self.assertIn("前の会話の続き", text)
+        self.assertIn("前の返答の形をまねず", text)  # 古い指示文で書いた返答（「詳細:」の行など）を、まねさせない
         self.assertNotIn("{{", text)
         self.assertNotIn("前の会話の続き", run_claude.build_prompt(*args))
 
