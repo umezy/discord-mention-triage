@@ -460,7 +460,7 @@ def with_session(body: str, name: str, link: str = "") -> str:
     """件ごとのメッセージ（`%%SPLIT%%` で区切った塊）の最後に、セッションの名前の行を足す。
     結果のあとに名前を 1 通で送ると、どの件のセッションかが分からない（最後の件のものに見える）ので、件の中に入れる。
     名前は Python が作るので、Claude の返答（セッションに残る文面）には入らない。link は、中継ページへのリンク（ADR-0040）。"""
-    footer = "セッション: " + name + ("\n[デスクトップ版で開く](<%s>)" % link if link else "")
+    footer = "セッション: " + name + ("\n[Claudeで開く(PCのみ)](<%s>)" % link if link else "")
     blocks = [b.strip() for b in str(body).split(notify.SPLIT_MARK)]
     return ("\n%s\n" % notify.SPLIT_MARK).join(b + "\n\n" + footer for b in blocks if b)
 

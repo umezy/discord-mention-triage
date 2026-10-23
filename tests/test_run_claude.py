@@ -652,7 +652,7 @@ class DesktopImport(Base):
         f = run_claude.with_session
         self.assertEqual(f("A\n%%SPLIT%%\nB\n", "N"), "A\n\nセッション: N\n%%SPLIT%%\nB\n\nセッション: N")
         self.assertEqual(f("A\n%%SPLIT%%\n\n%%SPLIT%%\n", "N", "https://x/o.html#local_1"),
-                         "A\n\nセッション: N\n[デスクトップ版で開く](<https://x/o.html#local_1>)")  # 空の塊には付けない
+                         "A\n\nセッション: N\n[Claudeで開く(PCのみ)](<https://x/o.html#local_1>)")  # 空の塊には付けない
 
     def test_the_name_message_links_to_the_relay_page_when_one_is_set(self):
         # Discord は claude:// をリンクにしないので、中継ページへのリンクにする。ID は # の後ろ（ADR-0040）
@@ -660,7 +660,7 @@ class DesktopImport(Base):
         os.environ["FAKE_CLAUDE_SESSION_ID"] = sid
         res = self.run_triage(self.keep_cfg(desktop_link_page="https://example.github.io/t/open.html"), lambda *a, **k: "ok")
         self.assertTrue(res["ok"], res)
-        self.assertTrue(self.posts[0][0].endswith("\nセッション: " + NAME + "\n[デスクトップ版で開く]"
+        self.assertTrue(self.posts[0][0].endswith("\nセッション: " + NAME + "\n[Claudeで開く(PCのみ)]"
                                                   "(<https://example.github.io/t/open.html#local_%s>)" % sid), self.posts)
 
     def test_no_link_without_a_page(self):
