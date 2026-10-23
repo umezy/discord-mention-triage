@@ -15,7 +15,7 @@
 同じ流れの続きを、前のセッションに書き足すときは（ADR-0038）、そのセッションが一覧に出ているか（取り込まれていて、アーカイブされて
 いないか）を、同じ記録の isArchived で確かめる（listed）。
 
-名前の 1 通に足す「デスクトップ版で開く」リンクも作る（page_link。ADR-0040）。Discord は claude:// をリンクにしないので、
+各件のセッションの行に足す「デスクトップ版で開く」リンクも作る（page_link。ADR-0040）。Discord は claude:// をリンクにしないので、
 中継ページ（docs/open.html）へのリンクにし、ページが同じ claude://code/continue?session=local_<ID> を開く。
 """
 

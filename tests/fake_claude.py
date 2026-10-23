@@ -65,7 +65,7 @@ drafts = re.search(r"\(1\) ドラフトの控え: `([^`]+)`", prompt)
 if drafts:
     with open(drafts.group(1), "w", encoding="utf-8") as f:
         f.write("# drafts (fake)\n")
-reply = [] if mode == "nodigest" else [os.environ.get("FAKE_CLAUDE_DIGEST") or "**Discord メンション対応 — fake**\n返信ドラフト 1件"]
+reply = [] if mode == "nodigest" else [os.environ.get("FAKE_CLAUDE_DIGEST") or "**返信ドラフト**\nalice（fake）\n```\n確認します\n```"]
 if counts != "none":
     reply.append("COUNTS " + counts)
 

@@ -229,7 +229,7 @@ def pick(table: dict, items, exists=transcript_exists) -> str:
 
 
 def name_of(table: dict, items) -> str:
-    """続ける前のセッションの名前（書き足すとき、名前の 1 通に使う）。古い形の控えには無い（""）。"""
+    """続ける前のセッションの名前（書き足すとき、各件のセッションの行に使う）。古い形の控えには無い（""）。"""
     entry = table.get(next(iter(places(items)), ""))
     return str(entry.get("name") or "") if isinstance(entry, dict) else ""
 

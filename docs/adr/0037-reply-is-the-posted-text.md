@@ -44,4 +44,5 @@ date: 2026-10-19
 
 - この ADR が一部を変えた ADR:
   - [ADR-0005](0005-minimal-claude-permissions.md): 書ける場所は `drafts/` だけになった。投稿は、Claude の最後の返答を Python が確かめてから行う
+- その後変わった所: 取り込む設定（`desktop_import`）のときは、Python が各件のメッセージの最後に、セッションの名前の行を足す（届く文面は、返答にその行を足したもの）。いまの形は [しくみ](../how-it-works.md)
 - 関連: [しくみ](../how-it-works.md)、[security.md](../security.md)

@@ -7,6 +7,7 @@
   2. Claude は「ドラフトの控え」のファイルを書き、最後の返答に「投稿本文」を書くだけ（Discord にも Webhook にも触れない）
   3. このスクリプトが控えと返答を確かめ、返答から COUNTS の行を外したものを、Webhook で本人専用チャンネルへ投稿する
      （セッションの最後の返答と、届く文面が同じものになる。本人がセッションだけで続きを相談できるように。ADR-0037）
+     1 件ずつ別のメッセージにし、取り込む設定のときは、各件の最後にセッションの名前の行を足す（with_session）
   4. 成功したら claim を processed/ へ。失敗したら claim を残して、数分後に tick が戻して再試行させる
 
 同じ流れの続きの件は、前のセッションに書き足して仕分ける（--resume <前の ID>。ADR-0038）。前のセッションを、デスクトップ版の
@@ -60,9 +61,9 @@ ATTENTION_MARKS = ("⚠",)
 
 PR_NOTE = (
     "**PR について**: この実行では PR レビューは自動では走りません（無人の PR レビューは未有効）。"
-    "`pull_requests` / `pull_requests_blocked` を持つ要素も、通常どおり仕分けてください。そのうえで、"
-    "ダイジェストのその件に「PRレビュー依頼: <URL>」と1行加えます。"
-    "PRレビュー依頼の件数は、ほかの区分と重ねて数えてかまいません。"
+    "`pull_requests` / `pull_requests_blocked` を持つ要素も、仕分けてください。PR のレビューを頼まれている件は、"
+    "「返信ドラフト」にして、その件に「PRレビュー依頼: <URL>」と1行加えます。"
+    "COUNTS の pr は、その件数です（draft と重ねて数えます）。"
 )
 
 
@@ -321,7 +322,7 @@ def continue_mode(cfg, session_id: str, name: str, view, run_dir, holder=None, r
     """同じ流れの続きを、どう続けるか（ADR-0038、ADR-0039）。(続け方, 写す理由, 開いている処理の様子) を返す。
     続け方は "append" = 前のセッションに書き足す / "fork" = 前の会話を写した新しいセッション。写す理由と様子は、実行記録に書く。
 
-    名前が控えに無い（古い形の）ときは写す（理由 "no_name"。名前の 1 通を送れないので）。
+    名前が控えに無い（古い形の）ときは写す（理由 "no_name"。各件にセッションの名前を書けないので）。
     取り込む設定のときは、デスクトップ版の一覧に出ていること（アーカイブされていない）を条件にする（理由は listed の結果:
     "archived" / "missing" / "unknown"）。本人がしまったセッションに書き足しても、目に入らないので。
     前のセッションを、いま動いている Claude Code が開いていれば、その間に書き足すと、デスクトップ版は書き足した分を読まず、
@@ -455,6 +456,15 @@ def digest_from_reply(reply: str) -> str:
     return "\n".join(keep).strip()
 
 
+def with_session(body: str, name: str, link: str = "") -> str:
+    """件ごとのメッセージ（`%%SPLIT%%` で区切った塊）の最後に、セッションの名前の行を足す。
+    結果のあとに名前を 1 通で送ると、どの件のセッションかが分からない（最後の件のものに見える）ので、件の中に入れる。
+    名前は Python が作るので、Claude の返答（セッションに残る文面）には入らない。link は、中継ページへのリンク（ADR-0040）。"""
+    footer = "セッション: " + name + ("\n[デスクトップ版で開く](<%s>)" % link if link else "")
+    blocks = [b.strip() for b in str(body).split(notify.SPLIT_MARK)]
+    return ("\n%s\n" % notify.SPLIT_MARK).join(b + "\n\n" + footer for b in blocks if b)
+
+
 def needs_mention(counts, body: str) -> bool:
     """配達に、本人へのメンション（通知）を付けるか。対応不要だけの配達には、付けない（手を止めなくてよい回で、通知を出さない）。
 
@@ -508,7 +518,7 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
         session_id = str(meta.get("session_id") or "")
         if session_id:
             summary["session_id"] = session_id
-        name = str(meta.get("session_name") or "")  # 古い形の控えには無い（そのときは名前の 1 通を送らない）
+        name = str(meta.get("session_name") or "")  # 古い形の控えには無い（そのときは各件にセッションの名前を書かない）
         summary["counts"] = meta.get("counts")  # 通知するかどうかの判定に使う。古い形の控えには無い（そのときは通知する）
         continued = str(meta.get("continued_from") or "")
         mode = str(meta.get("continue_mode") or "")
@@ -584,7 +594,13 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
                                          "continue_mode": mode}), encoding="utf-8")
 
     body = digest_file.read_text(encoding="utf-8")
-    ok, line = notify.send(home, body, mention=needs_mention(summary["counts"], body), poster=poster)
+    mention = needs_mention(summary["counts"], body)
+    if cfg.desktop_import and cfg.keep_transcripts and session_id and session_naming.safe(name):
+        # 取り込むセッションの名前を、各件の最後の行に入れる。長押しで写すと、名前も一緒に取れるので、出先から「この件の続き」と
+        # 頼むときに、どのセッションかを正確に言える。名前には本文の頭が入るので、記録には書かない。
+        # 中継ページの URL が設定にあれば、PC の Discord から押すとデスクトップ版でそのセッションが開くリンクを、下の行に足す（ADR-0040）
+        body = with_session(body, name, desktop_view.page_link(cfg.desktop_link_page, session_id))
+    ok, line = notify.send(home, body, mention=mention, poster=poster)
     if not ok:
         summary["post_error"] = line
         return finish_failure(home, files, summary, "post_failed", poster, started, alert=False)
@@ -607,14 +623,6 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
             continuation.record(home, items, session_id, continued, name=name)  # 次の回が、この会話を引き継げるように
         except OSError:
             pass  # 控えられなくても、仕分けは成功のまま（次の回が、新しいセッションになるだけ）
-    if cfg.desktop_import and cfg.keep_transcripts and session_id and session_naming.safe(name):
-        # 取り込むセッションの名前だけを、もう 1 通送る（通知は付けない）。長押しでそのまま写せるので、出先から「この件の続き」と
-        # 頼むときに、どのセッションかを正確に言える。失敗しても仕分けは成功のまま。名前には本文の頭が入るので、記録には結果だけ書く
-        # 中継ページの URL が設定にあれば、PC の Discord から押すとデスクトップ版でそのセッションが開くリンクを、下の行に足す（ADR-0040）
-        link = desktop_view.page_link(cfg.desktop_link_page, session_id)
-        body = name + ("\n[デスクトップ版で開く](<%s>)" % link if link else "")
-        sent, name_line = notify.send(home, body, mention=False, poster=poster)
-        summary["name_post"] = "ok" if sent else name_line
     if cfg.desktop_import and cfg.keep_transcripts and session_id and mode != "append":
         # 投稿のあと、成功した回だけ。結果は記録に残すが、失敗しても仕分けの成否には影響させない。
         # 取り込むと、デスクトップ版の表示がそのセッションへ移るので、見ていたセッションへ戻す（ADR-0035）。

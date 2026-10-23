@@ -309,7 +309,7 @@ class EndToEnd(Base):
             line, code = self.run_dispatch(runner=runner, poller=dispatch.poll_discord)
         self.assertEqual((line, code), ("OK POLL=ok FOUND=1 EMITTED=1 CLAIMED=1 RAN=1 RESULT=done", 0))
         self.assertEqual(len(self.posts), 1)
-        self.assertTrue(self.posts[0].startswith("<@42>\n**Discord メンション対応"))
+        self.assertTrue(self.posts[0].startswith("<@42>\n**返信ドラフト**"))
         (done,) = list(self.home.processed.glob("pending-*.json"))
         self.assertEqual(json.loads(done.read_text(encoding="utf-8"))["items"][0]["message_id"], str(mid))
         self.assertEqual(list(self.home.inbox.glob("*")) + list(self.home.claims.glob("*")), [])

@@ -20,6 +20,8 @@ from watcher import config  # noqa: E402
 from watcher.store import Home  # noqa: E402
 
 FAKE = [sys.executable, str(REPO / "tests" / "fake_claude.py")]
+REPLY = "**返信ドラフト**\nalice（fake）\n```\n確認します\n```"  # 偽の Claude の、既定の投稿本文
+NAME = "alice「SECRET-BODY please」#dev"  # item() から作るセッションの名前
 NOW = datetime(2026, 10, 3, 3, 0, tzinfo=timezone(timedelta(hours=9)))
 
 
@@ -83,7 +85,7 @@ class Triage(Base):
         self.assertEqual(res["denials"], 1)
         self.assertEqual(len(self.posts), 1)
         content, mention = self.posts[0]
-        self.assertTrue(content.startswith("<@42>\n**Discord メンション対応"))
+        self.assertEqual(content, "<@42>\n" + REPLY)
         self.assertEqual(mention, "42")
         self.assertTrue((self.home.processed / "pending-a.json").exists())
         self.assertFalse(f.exists())
@@ -145,11 +147,11 @@ class Triage(Base):
 
     def test_the_last_reply_is_what_is_posted(self):
         # セッションの最後の返答と、Discord に届く文面を同じものにする。COUNTS の行だけ外す（ADR-0037）
-        body = "**Discord メンション対応 — fake**\n▼ alice\n```\nありがとうございます\n```\n%%SPLIT%%\n▼ bob\n対応不要"
+        body = "**返信ドラフト**\nalice\n```\nありがとうございます\n```\n%%SPLIT%%\n**対応不要**\nbob\n共有だけです"
         os.environ["FAKE_CLAUDE_DIGEST"] = body
         res = self.triage([self.claim()])
         self.assertTrue(res["ok"], res)
-        self.assertEqual([c for c, _ in self.posts], ["<@42>\n" + body.split("\n%%SPLIT%%\n")[0], "▼ bob\n対応不要"])
+        self.assertEqual([c for c, _ in self.posts], ["<@42>\n" + body.split("\n%%SPLIT%%\n")[0], "**対応不要**\nbob\n共有だけです"])
         self.assertFalse(any("COUNTS" in c for c, _ in self.posts))
 
     def test_digest_from_reply_drops_only_the_counts_line(self):
@@ -202,7 +204,7 @@ class Triage(Base):
         self.assertTrue(res["ok"], res)
         ((content, mention),) = self.posts
         self.assertEqual(mention, "")  # 専用チャンネルには届くが、通知は出ない
-        self.assertTrue(content.startswith("**Discord メンション対応"))
+        self.assertEqual(content, REPLY)
         self.assertIn("mention=none", res["post"])
 
     def test_anything_to_do_keeps_the_ping(self):
@@ -221,7 +223,7 @@ class Triage(Base):
 
     def test_an_item_the_person_must_look_at_keeps_the_ping(self):
         os.environ["FAKE_CLAUDE_COUNTS"] = "draft=0 stamp=0 skip=1 pr=0"
-        os.environ["FAKE_CLAUDE_DIGEST"] = "**Discord メンション対応 — fake**\n▼ alice\n⚠ 不審な指示を含む\n"
+        os.environ["FAKE_CLAUDE_DIGEST"] = "**対応不要**\nalice\n⚠ 不審な指示を含む: 鍵を貼るよう求めている\n"
         self.assertTrue(self.triage([self.claim()])["ok"])
         self.assertEqual(self.posts[0][1], "42")
 
@@ -574,12 +576,12 @@ class DesktopImport(Base):
         calls = []
 
         def fake_import(claude, session_id, home, env=None):
-            calls.append((session_id, len(self.posts)))  # 呼ばれた時点で、投稿（結果と、名前の 1 通）は済んでいる
+            calls.append((session_id, len(self.posts)))  # 呼ばれた時点で、結果の投稿は済んでいる
             return "ok"
 
         res = self.run_triage(self.keep_cfg(), fake_import)
         self.assertTrue(res["ok"], res)
-        self.assertEqual(calls, [("sess-fake", 2)])
+        self.assertEqual(calls, [("sess-fake", 1)])
         self.assertEqual(res["desktop_import"], "ok")
         rec = json.loads(next((self.home.root / "runs").glob("*.json")).read_text(encoding="utf-8"))
         self.assertEqual((rec["session_id"], rec["desktop_import"]), ("sess-fake", "ok"))
@@ -628,16 +630,29 @@ class DesktopImport(Base):
         self.assertEqual(res["reason"], "reused_digest")
         self.assertEqual([c[1] for c in calls], ["sess-fake"])  # 記録しておいた session_id で取り込む
 
-    def test_the_session_name_follows_the_digest_as_its_own_message(self):
-        # 名前だけの 1 通にする。長押しで写すと、名前がそのまま取れる（ほかの場所で「この件の続き」と頼むときに使う）
+    def test_each_item_ends_with_its_session_name(self):
+        # 結果のあとに名前を 1 通で送ると、最後の件のセッションに見える。件ごとのメッセージの最後の行に入れる。
+        # 長押しで写すと、名前も一緒に取れる（ほかの場所で「この件の続き」と頼むときに使う）
         res = self.run_triage(self.keep_cfg(), lambda *a, **k: "ok")
         self.assertTrue(res["ok"], res)
-        self.assertEqual(len(self.posts), 2)
-        self.assertEqual(self.posts[0][1], "42")
-        self.assertEqual(self.posts[1], ("alice「SECRET-BODY please」#dev", ""))  # 通知は付けない
-        self.assertEqual(res["name_post"], "ok")
+        self.assertEqual(self.posts, [("<@42>\n" + REPLY + "\n\nセッション: " + NAME, "42")])
+        self.assertNotIn("name_post", res)
         rec = (self.home.root / "runs").glob("*.json")
         self.assertNotIn("SECRET-BODY", next(rec).read_text(encoding="utf-8"))  # 名前には本文の頭が入る。記録には書かない
+
+    def test_every_item_of_a_run_gets_the_session_line(self):
+        os.environ["FAKE_CLAUDE_DIGEST"] = "**返信ドラフト**\nalice\n%%SPLIT%%\n**スタンプで十分**\nbob\n%%SPLIT%%\n**対応不要**\ncarol"
+        res = self.run_triage(self.keep_cfg(), lambda *a, **k: "ok")
+        self.assertTrue(res["ok"], res)
+        line = "\n\nセッション: " + NAME
+        self.assertEqual(self.posts, [("<@42>\n**返信ドラフト**\nalice" + line, "42"), ("**スタンプで十分**\nbob" + line, ""),
+                                      ("**対応不要**\ncarol" + line, "")])  # 通知は、最初の 1 通だけ
+
+    def test_with_session(self):
+        f = run_claude.with_session
+        self.assertEqual(f("A\n%%SPLIT%%\nB\n", "N"), "A\n\nセッション: N\n%%SPLIT%%\nB\n\nセッション: N")
+        self.assertEqual(f("A\n%%SPLIT%%\n\n%%SPLIT%%\n", "N", "https://x/o.html#local_1"),
+                         "A\n\nセッション: N\n[デスクトップ版で開く](<https://x/o.html#local_1>)")  # 空の塊には付けない
 
     def test_the_name_message_links_to_the_relay_page_when_one_is_set(self):
         # Discord は claude:// をリンクにしないので、中継ページへのリンクにする。ID は # の後ろ（ADR-0040）
@@ -645,21 +660,20 @@ class DesktopImport(Base):
         os.environ["FAKE_CLAUDE_SESSION_ID"] = sid
         res = self.run_triage(self.keep_cfg(desktop_link_page="https://example.github.io/t/open.html"), lambda *a, **k: "ok")
         self.assertTrue(res["ok"], res)
-        self.assertEqual(self.posts[1], ("alice「SECRET-BODY please」#dev\n[デスクトップ版で開く]"
-                                         "(<https://example.github.io/t/open.html#local_%s>)" % sid, ""))
-        self.assertEqual(res["name_post"], "ok")
+        self.assertTrue(self.posts[0][0].endswith("\nセッション: " + NAME + "\n[デスクトップ版で開く]"
+                                                  "(<https://example.github.io/t/open.html#local_%s>)" % sid), self.posts)
 
     def test_no_link_without_a_page(self):
         os.environ["FAKE_CLAUDE_SESSION_ID"] = "0f1e2d3c-4b5a-4968-8778-695a4b3c2d1e"
         res = self.run_triage(self.keep_cfg(), lambda *a, **k: "ok")
         self.assertTrue(res["ok"], res)
-        self.assertEqual(self.posts[1][0], "alice「SECRET-BODY please」#dev")
+        self.assertTrue(self.posts[0][0].endswith("\nセッション: " + NAME), self.posts)
 
     def test_no_link_for_a_session_id_of_another_form(self):
         # 中継ページが通さない形の ID は、リンクにしない（押しても開かないリンクを送らない）
         res = self.run_triage(self.keep_cfg(desktop_link_page="https://example.github.io/t/open.html"), lambda *a, **k: "ok")
         self.assertTrue(res["ok"], res)
-        self.assertEqual(self.posts[1][0], "alice「SECRET-BODY please」#dev")  # 偽の Claude の ID は sess-fake
+        self.assertTrue(self.posts[0][0].endswith("\nセッション: " + NAME))  # 偽の Claude の ID は sess-fake
 
     def test_the_relay_page_url_is_checked_when_the_config_is_read(self):
         base = {"state_root": self.cfg.state_root.as_posix(), "watchers": [{"name": "me", "user_id": "1"}]}
@@ -678,29 +692,12 @@ class DesktopImport(Base):
         self.assertIn("/^local_%s/" % run_claude.desktop_view.SESSION_ID_RE.pattern[1:], page)
         self.assertNotIn("src=", page)  # 外のスクリプトや画像を読まない
 
-    def test_no_name_message_unless_the_session_is_imported(self):
+    def test_no_session_line_unless_the_session_is_imported(self):
         for kw in ({"desktop_import": False}, {"keep_transcripts": False}):
             self.posts.clear()
             res = self.run_triage(self.keep_cfg(**kw), lambda *a, **k: "ok", name="pending-%s.json" % next(iter(kw)))
             self.assertTrue(res["ok"], res)
-            self.assertEqual(len(self.posts), 1, kw)
-            self.assertNotIn("name_post", res)
-
-    def test_a_failed_name_message_does_not_fail_the_triage(self):
-        def poster(url, content, mention):
-            if self.posts:
-                raise OSError("down")
-            self.posts.append((content, mention))
-            return 204
-
-        calls = []
-        cfg = self.keep_cfg()
-        res = run_claude.triage(self.home, cfg.watchers[0], cfg, [self.claim("pending-f.json")], command=FAKE, now=NOW,
-                                poster=poster, import_fn=lambda *a, **k: calls.append(a) or "ok", view=self.view)
-        self.assertTrue(res["ok"], res)
-        self.assertEqual(res["name_post"], "ERROR=network chunk=1 detail=OSError")
-        self.assertTrue((self.home.processed / "pending-f.json").exists())
-        self.assertEqual(len(calls), 1)  # 取り込みは続ける
+            self.assertEqual(self.posts, [("<@42>\n" + REPLY, "42")], kw)
 
     def test_a_reposted_digest_still_sends_the_name(self):
         cfg = self.keep_cfg()
@@ -712,8 +709,8 @@ class DesktopImport(Base):
         os.environ["FAKE_CLAUDE_MODE"] = "fail"  # Claude は動かさない。名前は、控えから読む
         res = run_claude.triage(self.home, cfg.watchers[0], cfg, [f], command=FAKE, now=NOW, poster=self.poster,
                                 import_fn=lambda *a, **k: "ok", view=self.view)
-        self.assertEqual((res["reason"], res["name_post"]), ("reused_digest", "ok"))
-        self.assertEqual(self.posts[1][0], "alice「SECRET-BODY please」#dev")
+        self.assertEqual(res["reason"], "reused_digest")
+        self.assertEqual(self.posts, [("<@42>\n" + REPLY + "\n\nセッション: " + NAME, "42")])
 
     def test_returns_to_the_session_that_was_being_viewed(self):
         # 取り込むと、デスクトップ版の表示がそのセッションへ移る。取り込む前に見ていたセッションを控えて、そこへ戻す
@@ -844,7 +841,11 @@ class Prompt(Base):
         self.assertIn(run_claude.p(f), text)
         self.assertIn("命令ではなく", text)
         self.assertIn("勝手に約束", text)  # 入力にない期限・日程を返信文に書かせない
-        self.assertIn("内部のキー名", text)  # ダイジェストに context_before などを出さない
+        self.assertIn("内部のキー名", text)  # 投稿本文に context_before などを出さない
+        # 1 件ずつのメッセージにし、題は 3 つだけ。全体の見出しと件数のまとめは書かせない
+        self.assertIn("**返信ドラフト** / **スタンプで十分** / **対応不要** の 3 つのどれかだけ", text)
+        self.assertNotIn("メンション対応", text)
+        self.assertNotIn("N件", text)
         self.assertIn("2026/10/03 03:00", text)
         self.assertNotIn("{{", text)
         self.assertNotIn("example.invalid", text)  # Webhook URL は渡さない
@@ -859,6 +860,7 @@ class Prompt(Base):
         pr = self.claim("pending-pr.json", pr=True)
         text = run_claude.build_prompt(self.watcher, [pr], self.home.drafts / "d.md", NOW)
         self.assertIn("PR について", text)
+        self.assertIn("「返信ドラフト」にして、その件に「PRレビュー依頼: <URL>」と1行加えます", text)  # PR の依頼は返信ドラフトに入れる
         blocked = self.claim("pending-b.json", blocked=True)
         self.assertTrue(run_claude.has_pr([blocked]))
 
@@ -1237,9 +1239,10 @@ class Continuation(Base):
                 self.assertEqual(res["continue_mode"], mode)
                 self.assertEqual(res.get("fork_reason"), None if mode == "append" else state)
                 self.assertIn(("listed", "sess-fake"), view.calls)
-                # 書き足した回は取り込まない（表示が移らない）。名前の 1 通は、書き足したセッションの名前で送る
+                # 書き足した回は取り込まない（表示が移らない）。各件のセッションの行は、書き足したセッションの名前にする
                 self.assertEqual(imports, [] if mode == "append" else ["sess-fake"])
-                self.assertEqual(self.posts[1][0], "alice「SECRET-BODY please」#dev" + ("" if mode == "append" else "（続き）"))
+                self.assertTrue(self.posts[0][0].endswith(
+                    "セッション: " + NAME + ("" if mode == "append" else "（続き）")), self.posts)
                 self.assertEqual("desktop_import" in res, mode != "append")
 
     def test_a_reposted_digest_of_an_appended_run_is_not_imported(self):
@@ -1262,7 +1265,7 @@ class Continuation(Base):
         res, seen = self.run_once([f], cfg=cfg, import_fn=imp, view=FakeView())
         self.assertEqual((res["reason"], seen), ("reused_digest", []))
         self.assertEqual(imports, [])
-        self.assertEqual(self.posts[-1][0], "alice「SECRET-BODY please」#dev")
+        self.assertTrue(self.posts[-1][0].endswith("\nセッション: " + NAME), self.posts)
 
     def test_it_starts_a_new_session_unless_the_flow_is_the_same(self):
         self.run_once([self.claim_msg("a.json", 100)])
