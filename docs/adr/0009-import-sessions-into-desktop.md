@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-10-04
-amended-by: [ADR-0015, ADR-0033, ADR-0035, ADR-0036, ADR-0038]
+amended-by: [ADR-0015, ADR-0033, ADR-0035, ADR-0036, ADR-0038, ADR-0043]
 ---
 
 # ADR-0009: 仕分けのたびに、セッションをデスクトップ版へ取り込む
@@ -50,5 +50,6 @@ amended-by: [ADR-0015, ADR-0033, ADR-0035, ADR-0036, ADR-0038]
   - [ADR-0035](0035-return-to-viewed-session.md): 取り込むと、デスクトップ版が前面に出て、表示もそのセッションへ移る、と分かった。取り込んだあと、見ていたセッションへ戻すようにした
   - [ADR-0036](0036-continue-the-same-flow.md): 同じ流れの続きのメンションは、前のセッションの会話を写した新しいセッションで仕分け、それを取り込むようにした。取り込み済みのセッションへ外から書き足しても、デスクトップ版には出ない、と分かったため
   - [ADR-0038](0038-add-to-the-same-session.md): 同じ流れの続きは、前のセッションがどこでも開かれていなければ、そのセッションに書き足し、取り込み直さない。一覧は、流れごとに 1 件のまま
+  - [ADR-0043](0043-name-sessions-from-the-reply.md): セッションの名前は、仮の名前で起動したあと、返答を書いた仕分けの Claude が中身を見て付けた名前に、`/rename` で付け直す
 - その後変わった所: セッションの名前に、本文の頭も入れるようにした。いまの形と、通す文字の決め方は、[しくみ](../how-it-works.md) と [security.md](../security.md#プロンプトインジェクション)
 - 関連: [しくみ](../how-it-works.md)、[security.md](../security.md)、[ADR-0008](0008-keep-session-transcripts.md)

@@ -5,8 +5,9 @@
 流れ:
   1. claim 済みの pending-*.json を、`claude -p`（画面なしの Claude Code）に渡す（dispatch.py は 1 件ずつ渡す。ADR-0041）
   2. Claude は「ドラフトの控え」のファイルを書き、最後の返答に「投稿本文」を書くだけ（Discord にも Webhook にも触れない）
-  3. このスクリプトが控えと返答を確かめ、返答から COUNTS の行を外したものを、Webhook で本人専用チャンネルへ投稿する
+  3. このスクリプトが控えと返答を確かめ、返答から COUNTS と NAME の行を外したものを、Webhook で本人専用チャンネルへ投稿する
      （セッションの最後の返答と、届く文面が同じものになる。本人がセッションだけで続きを相談できるように。ADR-0037）
+     NAME の行は、Claude が返答の中身から付けたセッションの名前。投稿の前に、`/rename` でセッションの名前を付け直す（ADR-0043）
      1 件ずつ別のメッセージにし、取り込む設定のときは、各件の最後にセッションの名前の行を足す（with_session）
   4. 成功したら claim を processed/ へ。失敗したら claim を残して、数分後に tick が戻して再試行させる
 
@@ -64,6 +65,7 @@ JST = timezone(timedelta(hours=9))
 RETRY_AFTER_SEC = 5 * 60  # 失敗した claim を戻すまでの待ち（tick の掃除が戻す）
 FAIL_ALERT_COOLDOWN_SEC = 30 * 60
 COUNTS_RE = re.compile(r"COUNTS\s+draft=(\d+)\s+stamp=(\d+)\s+skip=(\d+)\s+pr=(\d+)")
+NAME_RE = re.compile(r"NAME[ \t]+(.+)")  # 返答の終わりの、セッションの名前の行（triage.md の「最後に」。ADR-0043）
 # 対応不要でも、本人に見てもらう印（triage.md の「不審な指示」）。本文にあれば、通知する
 ATTENTION_MARKS = ("⚠",)
 
@@ -115,9 +117,9 @@ def build_command(claude: str, cfg, watcher, home, session_name: str = "", extra
                   append_to: str = "", workdir=None, env_dirs=()) -> list:
     """claude -p の引数。長い日本語の指示は引数に載せず、標準入力で渡す（Windows の引数は日本語が壊れる）。
 
-    session_name は、記録を残すときだけ付ける。デスクトップ版の左側で、誰の、何の件かが分かるようにする（session_naming.py）。
-    誰でも書ける文字列が入るので、決めた文字だけの名前でなければ、付けない（claude.cmd のときは、引数が cmd.exe を通る）。
-    名前は、引数でしか渡せない。短い日本語は、この経路（Python → claude.cmd → claude.exe）では壊れなかった（2026-10-10 の実測）。
+    session_name は、記録を残すときだけ付ける仮の名前（session_naming.provisional）。起動するときは、まだ件の中身を知らないので、
+    仕分けのあとで、Claude が付けた名前に付け直す（rename_command。ADR-0043）。決めた文字だけの名前でなければ、付けない
+    （claude.cmd のときは、引数が cmd.exe を通る）。短い日本語は、この経路（Python → claude.cmd → claude.exe）では壊れなかった（2026-10-10 の実測）。
 
     モードは、デスクトップ版へ取り込む設定のときだけ "auto"（ADR-0033）。デスクトップ版は、取り込んだセッションを、記録に残った
     モードで開く。`claude --desktop --resume` には、ほかの指定を一緒に渡せない（2026-10-16 に確かめた）。
@@ -229,6 +231,51 @@ def auth_source(env: dict) -> str:
     """claude がどの資格情報で動くか。"token" = 専用の長期トークン（`claude` のログインより優先される）/
     "cli_login" = PC に保存された `claude` のログイン。"""
     return "token" if env.get("CLAUDE_CODE_OAUTH_TOKEN") else "cli_login"
+
+
+RENAME_TIMEOUT_SEC = 60
+
+
+def rename_command(claude: str, cfg, watcher, session_id: str, name: str) -> list:
+    """セッションの名前を付け直す（`claude -p --resume <ID> "/rename <名前>"`。ADR-0043）。/rename は、Claude Code の中の命令で、
+    モデルを動かさずに、セッションの記録へ新しい名前を書く。セッションの記録に、/rename の行と「Session renamed to: …」が残る。
+
+    名前は、引数になる（claude.cmd のときは cmd.exe を通る）。決めた文字だけの名前（session_naming.safe）でなければ、呼ばない。
+    道具は渡さない。設定ファイル・MCP も読まない（仕分けと同じ）。万一 /rename が命令として通らず、モデルに届いても、
+    何もできずに 1 回で終わる。モードは仕分けと同じにする（デスクトップ版は、記録に残ったモードで開く。ADR-0033）。"""
+    return [
+        claude, "-p", "/rename " + name,
+        "--resume", session_id,
+        "--model", watcher.triage_model,
+        "--permission-mode", "auto" if cfg.desktop_import else "dontAsk",
+        "--permission-prompts", "none",
+        "--tools", "",
+        "--max-turns", "1",
+        "--strict-mcp-config",
+        "--setting-sources", "",
+        "--output-format", "json",
+    ]
+
+
+def rename_session(claude, cfg, watcher, session_id: str, name: str, cwd, env=None, timeout: int = RENAME_TIMEOUT_SEC) -> str:
+    """名前を付け直す。**失敗しても仕分けは成功のまま**（仮の名前が残るだけ）。
+    戻り値は実行記録に書く短い文字列: ok / unsafe / claude_not_found / timeout / error / exit_<コード> / unexpected
+    （終わったが、返答に新しい名前が無い。/rename の形が変わったときなど）。名前そのものは返さない。"""
+    if not (session_naming.safe(name) and continuation.valid_id(session_id)):
+        return "unsafe"
+    if not claude:
+        return "claude_not_found"
+    try:
+        proc = subprocess.run(rename_command(claude, cfg, watcher, session_id, name), cwd=str(cwd), env=env,
+                              stdin=subprocess.DEVNULL, capture_output=True, timeout=timeout, creationflags=no_window_flags())
+    except subprocess.TimeoutExpired:
+        return "timeout"
+    except OSError:
+        return "error"
+    if proc.returncode != 0:
+        return "exit_%s" % proc.returncode
+    info = parse_result(proc.stdout.decode("utf-8", "replace"))
+    return "ok" if not info["is_error"] and name in info["reply"] else "unexpected"
 
 
 DESKTOP_IMPORT_TIMEOUT_SEC = 60
@@ -387,16 +434,6 @@ def claimed_items(files) -> list:
     return [item for f in files for item in tick.read_items(Path(f)) if isinstance(item, dict)]
 
 
-def session_name_for(files, continued: bool = False) -> str:
-    """届いた件から、セッションの名前を作る。名前は見やすさのためのものなので、作れなくても仕分けは止めない。
-    前の会話を引き継いだセッションには「（続き）」を付ける。デスクトップ版の一覧で、どれが新しい続きかが分かるように。"""
-    try:
-        name = session_naming.build(claimed_items(files))
-    except Exception:  # noqa: BLE001
-        name = session_naming.FALLBACK
-    return name + "（続き）" if continued else name
-
-
 def run_id_for(files) -> str:
     names = "|".join(sorted(Path(f).name for f in files))
     return hashlib.sha1(names.encode("utf-8")).hexdigest()[:10]
@@ -474,7 +511,7 @@ def parse_result(stdout: str) -> dict:
     denials = data.get("permission_denials")
     info["denials"] = len(denials) if isinstance(denials, list) else 0
     info["text"] = str(data.get("result", ""))[:300]  # 失敗の分類に使う。記録に書くのは never_ran のときだけ
-    info["reply"] = str(data.get("result", ""))  # 最後の返答の全文。投稿本文になる（digest_from_reply）。記録には書かない
+    info["reply"] = str(data.get("result", ""))  # 最後の返答の全文。投稿本文と、セッションの名前になる（split_reply）。記録には書かない
     # API が返したエラーの種類（例: "403 oauth_not_allowed_for_organization"）。決まった識別子で、本文は含まない
     info["api_error"] = " ".join(
         str(data[k]) for k in ("api_error_status", "api_error_code") if data.get(k) not in (None, ""))[:80]
@@ -484,11 +521,22 @@ def parse_result(stdout: str) -> dict:
     return info
 
 
-def digest_from_reply(reply: str) -> str:
-    """最後の返答から、投稿本文を取り出す。COUNTS の行は、機械が読むための行なので外す。
+def bare(line: str) -> str:
+    return line.strip().strip("`").strip()
+
+
+def split_reply(reply: str) -> tuple:
+    """最後の返答を、(投稿本文, Claude が付けたセッションの名前) に分ける。名前が無ければ ""。
+    COUNTS と NAME の行は、機械が読むための行なので外す。COUNTS はどこにあっても外す。NAME は、返答の終わりの、機械が読む行
+    （空行・COUNTS・NAME）の並びの中のものだけを取る。本文の途中にある「NAME …」の行は、本文のまま残す。
     残りは、そのまま投稿する。セッションに残る返答と、Discord に届く文面を、同じものにするため（ADR-0037）。"""
-    keep = [line for line in str(reply).split("\n") if not COUNTS_RE.fullmatch(line.strip().strip("`").strip())]
-    return "\n".join(keep).strip()
+    keep = [line for line in str(reply).split("\n") if not COUNTS_RE.fullmatch(bare(line))]
+    name = ""
+    while keep and (not keep[-1].strip() or NAME_RE.fullmatch(bare(keep[-1]))):  # 「```」だけの行は、本文の終わり
+        m = NAME_RE.fullmatch(bare(keep.pop()))
+        if m and not name:
+            name = m.group(1).strip()
+    return "\n".join(keep).strip(), name
 
 
 def with_session(body: str, name: str, link: str = "") -> str:
@@ -561,9 +609,10 @@ def choose_environment(home, watcher, cfg, items, summary, env, environments_fn=
 
 
 def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = None, poster=notify.post,
-           import_fn=import_to_desktop, view=None, environments_fn=None, picker=None) -> dict:
+           import_fn=import_to_desktop, view=None, environments_fn=None, picker=None, rename_fn=None) -> dict:
     """仕分けを1回実行する。例外は投げず、結果の辞書を返す（ok / reason / counts / ...）。
-    environments_fn() は環境の一覧、picker(環境, 関連するフォルダ, 件) は (選んだものか None, 費用) を返す（テストで差し替える。既定は environments.py）。"""
+    environments_fn() は環境の一覧、picker(環境, 関連するフォルダ, 件) は (選んだものか None, 費用) を返す（テストで差し替える。既定は environments.py）。
+    rename_fn は、セッションの名前を付け直す（テストで差し替える。既定は rename_session）。"""
     now = now or datetime.now(JST)
     files = [Path(f) for f in files if Path(f).exists()]
     if not files:
@@ -620,9 +669,9 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
             if by:
                 summary["held_by"] = by
         if mode == "append":
-            name = continuation.name_of(table, items)
+            name = continuation.name_of(table, items)  # 書き足す回は、名前を付け直さない（前の件の行の名前と、そろえておく）
         else:
-            name = session_name_for(files, continued=bool(continued)) if cfg.keep_transcripts else ""
+            name = session_naming.provisional(now, continued=bool(continued)) if cfg.keep_transcripts else ""
         if command is None:
             claude = claude_bin.find_claude(cfg.claude_bin)
             if not claude:
@@ -664,11 +713,24 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
             if reason:
                 return finish_blocked(home, files, summary, poster, started, reason)
             return finish_failure(home, files, summary, "claude_exit_%s" % code, poster, started)
-        digest = digest_from_reply(info["reply"])
+        digest, said = split_reply(info["reply"])
         if not digest:
             return finish_failure(home, files, summary, "no_digest", poster, started)
         if not drafts_file.exists():
             return finish_failure(home, files, summary, "no_drafts", poster, started)
+        if session_id and mode != "append":
+            # Claude が返答の中身から付けた名前に、付け直す（ADR-0043）。付け直せなければ、仮の名前のまま（各件の行も、仮の名前）
+            wanted = session_naming.final(said, continued=bool(continued))
+            if not wanted:
+                summary["rename"] = "no_name"
+            else:
+                try:
+                    summary["rename"] = (rename_fn or rename_session)(
+                        claude or claude_bin.find_claude(cfg.claude_bin), cfg, watcher, session_id, wanted, workdir, env)
+                except Exception:  # noqa: BLE001
+                    summary["rename"] = "error"
+                if summary["rename"] == "ok":
+                    name = wanted
         # 投稿だけ失敗したときに、Claude を動かさずに送り直せるよう、投稿本文を控えてから送る
         digest_file.write_text(digest, encoding="utf-8")
         meta_file.write_text(json.dumps({"drafts_file": str(drafts_file), "session_id": session_id, "session_name": name,
@@ -680,7 +742,7 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
     mention = needs_mention(summary["counts"], body)
     if cfg.desktop_import and cfg.keep_transcripts and session_id and session_naming.safe(name):
         # 取り込むセッションの名前を、各件の最後の行に入れる。長押しで写すと、名前も一緒に取れるので、出先から「この件の続き」と
-        # 頼むときに、どのセッションかを正確に言える。名前には本文の頭が入るので、記録には書かない。
+        # 頼むときに、どのセッションかを正確に言える。名前には件の中身が入るので、記録には書かない。
         # 中継ページの URL が設定にあれば、PC の Discord から押すとデスクトップ版でそのセッションが開くリンクを、下の行に足す（ADR-0040）
         body = with_session(body, name, desktop_view.page_link(cfg.desktop_link_page, session_id))
     ok, line = notify.send(home, body, mention=mention, poster=poster)

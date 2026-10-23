@@ -20,8 +20,10 @@ from watcher import config  # noqa: E402
 from watcher.store import Home  # noqa: E402
 
 FAKE = [sys.executable, str(REPO / "tests" / "fake_claude.py")]
+REAL_RENAME = run_claude.rename_session  # Base は、これを偽物に差し替える。付け直しそのものを確かめるときに使う
 REPLY = "**返信ドラフト**\nalice（fake）\n```\n確認します\n```"  # 偽の Claude の、既定の投稿本文
-NAME = "alice「SECRET-BODY please」#dev"  # item() から作るセッションの名前
+NAME = "予定の確認"  # 偽の Claude が、返答の NAME 行で付けるセッションの名前（付け直しは、Base で成功したことにする）
+TEMP = "メンション 10月3日 03時00分"  # 起動するときの仮の名前（NOW の時刻）
 NOW = datetime(2026, 10, 3, 3, 0, tzinfo=timezone(timedelta(hours=9)))
 
 
@@ -51,9 +53,18 @@ class Base(unittest.TestCase):
         self.posts = []
         self.post_fails = False
         os.environ.pop("FAKE_CLAUDE_MODE", None)
+        # 名前の付け直しは、本物の claude を呼ばない。呼ばれた名前を控え、成功したことにする（付け直しの検査は Rename で）
+        self.renames, self.rename_result = [], "ok"
+        patcher = mock.patch.object(run_claude, "rename_session",
+                                    side_effect=lambda claude, cfg, watcher, sid, name, cwd, env=None:
+                                    self.renames.append((sid, name)) or self.rename_result)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def tearDown(self):
         os.environ.pop("FAKE_CLAUDE_MODE", None)
+        os.environ.pop("FAKE_CLAUDE_NAME", None)
+        os.environ.pop("FAKE_CLAUDE_RENAME_OUT", None)
         os.environ.pop("FAKE_CLAUDE_ARGV_OUT", None)
         os.environ.pop("FAKE_CLAUDE_ERROR_TEXT", None)
         os.environ.pop("FAKE_CLAUDE_COUNTS", None)
@@ -146,20 +157,33 @@ class Triage(Base):
         self.assertEqual(tick.sweep(self.home, later, meta, dry_run=False), (["pending-a.json"], []))
 
     def test_the_last_reply_is_what_is_posted(self):
-        # セッションの最後の返答と、Discord に届く文面を同じものにする。COUNTS の行だけ外す（ADR-0037）
+        # セッションの最後の返答と、Discord に届く文面を同じものにする。COUNTS と NAME の行だけ外す（ADR-0037、ADR-0043）
         body = "**返信ドラフト**\nalice\n```\nありがとうございます\n```\n%%SPLIT%%\n**対応不要**\nbob\n共有だけです"
         os.environ["FAKE_CLAUDE_DIGEST"] = body
         res = self.triage([self.claim()])
         self.assertTrue(res["ok"], res)
         self.assertEqual([c for c, _ in self.posts], ["<@42>\n" + body.split("\n%%SPLIT%%\n")[0], "**対応不要**\nbob\n共有だけです"])
-        self.assertFalse(any("COUNTS" in c for c, _ in self.posts))
+        self.assertFalse(any("COUNTS" in c or "NAME" in c for c, _ in self.posts))
 
-    def test_digest_from_reply_drops_only_the_counts_line(self):
-        f = run_claude.digest_from_reply
-        self.assertEqual(f("**見出し**\n本文\nCOUNTS draft=1 stamp=0 skip=0 pr=0"), "**見出し**\n本文")
-        self.assertEqual(f("**見出し**\n\n`COUNTS draft=1 stamp=0 skip=0 pr=0`\n"), "**見出し**")
-        self.assertEqual(f("COUNTS draft=0 stamp=0 skip=1 pr=0"), "")
-        self.assertEqual(f("引用: COUNTS draft=1 stamp=0 skip=0 pr=0 と書いた"), "引用: COUNTS draft=1 stamp=0 skip=0 pr=0 と書いた")
+    def test_split_reply_drops_only_the_machine_lines(self):
+        f = run_claude.split_reply
+        self.assertEqual(f("**見出し**\n本文\nCOUNTS draft=1 stamp=0 skip=0 pr=0"), ("**見出し**\n本文", ""))
+        self.assertEqual(f("**見出し**\n\n`COUNTS draft=1 stamp=0 skip=0 pr=0`\n"), ("**見出し**", ""))
+        self.assertEqual(f("COUNTS draft=0 stamp=0 skip=1 pr=0"), ("", ""))
+        self.assertEqual(f("引用: COUNTS draft=1 stamp=0 skip=0 pr=0 と書いた"),
+                         ("引用: COUNTS draft=1 stamp=0 skip=0 pr=0 と書いた", ""))
+
+    def test_split_reply_takes_the_name_only_from_the_end(self):
+        # 名前は、返答の終わりの、機械が読む行の並びの中だけから取る。本文の途中の「NAME …」は、本文のまま投稿する
+        f = run_claude.split_reply
+        self.assertEqual(f("本文\nNAME 予定の確認\nCOUNTS draft=1 stamp=0 skip=0 pr=0"), ("本文", "予定の確認"))
+        self.assertEqual(f("本文\n\nCOUNTS draft=1 stamp=0 skip=0 pr=0\n`NAME 予定の確認`\n"), ("本文", "予定の確認"))
+        self.assertEqual(f("本文\nNAME 古い\nNAME 新しい\nCOUNTS draft=1 stamp=0 skip=0 pr=0"), ("本文", "新しい"))
+        self.assertEqual(f("> NAME 引用\nNAME 本文の中\n説明\nCOUNTS draft=1 stamp=0 skip=0 pr=0"),
+                         ("> NAME 引用\nNAME 本文の中\n説明", ""))
+        self.assertEqual(f("本文\nNAME\nCOUNTS draft=1 stamp=0 skip=0 pr=0"), ("本文\nNAME", ""))  # 名前の無い NAME は本文
+        self.assertEqual(f("```\nドラフト\n```\nNAME 予定の確認\nCOUNTS draft=1 stamp=0 skip=0 pr=0"),
+                         ("```\nドラフト\n```", "予定の確認"))  # コードブロックの閉じは、本文に残す
 
     def test_missing_digest_is_a_failure(self):
         os.environ["FAKE_CLAUDE_MODE"] = "nodigest"
@@ -533,6 +557,63 @@ class Command(Base):
         self.assertEqual(run_claude.rule_path(Path("C:/Users/x/y")), "//c/Users/x/y")
 
 
+class Rename(Base):
+    """セッションの名前の付け直し（`claude -p --resume <ID> "/rename <名前>"`。ADR-0043）。"""
+
+    def cfg_with(self, **kw):
+        return config.parse(dict({"state_root": self.cfg.state_root.as_posix(), "keep_transcripts": True,
+                                  "watchers": [{"name": "me", "user_id": "1"}]}, **kw))
+
+    def test_the_command_gives_no_tools_and_reads_no_settings(self):
+        cfg = self.cfg_with()
+        c = run_claude.rename_command("CLAUDE", cfg, cfg.watchers[0], "sess-1", "予定の確認")
+        self.assertEqual(c[:5], ["CLAUDE", "-p", "/rename 予定の確認", "--resume", "sess-1"])
+        self.assertEqual(c[c.index("--tools") + 1], "")
+        self.assertEqual(c[c.index("--setting-sources") + 1], "")
+        self.assertEqual(c[c.index("--max-turns") + 1], "1")
+        self.assertEqual(c[c.index("--permission-prompts") + 1], "none")
+        self.assertIn("--strict-mcp-config", c)
+        for banned in ("--add-dir", "--allowedTools", "--bare", "--fork-session", "--no-session-persistence"):
+            self.assertNotIn(banned, c)
+        self.assertFalse(any("dangerously" in x for x in c))
+        # モードは仕分けと同じにする（デスクトップ版は、記録に残ったモードで開く。ADR-0033）
+        self.assertEqual(c[c.index("--permission-mode") + 1], "dontAsk")
+        imp = self.cfg_with(desktop_import=True)
+        c = run_claude.rename_command("CLAUDE", imp, imp.watchers[0], "sess-1", "予定の確認")
+        self.assertEqual(c[c.index("--permission-mode") + 1], "auto")
+
+    def test_the_result_says_whether_the_name_was_changed(self):
+        cfg = self.cfg_with()
+        w = cfg.watchers[0]
+
+        def ran(stdout=b"", code=0):
+            return mock.patch.object(run_claude.subprocess, "run", return_value=mock.Mock(returncode=code, stdout=stdout))
+
+        done = json.dumps({"type": "result", "is_error": False, "result": "Session renamed to: 予定の確認"}).encode("utf-8")
+        with ran(done) as r:
+            self.assertEqual(REAL_RENAME("CLAUDE", cfg, w, "sess-1", "予定の確認", self.home.root), "ok")
+            self.assertEqual(r.call_args.kwargs["stdin"], subprocess.DEVNULL)  # 無人の実行。入力を待たない
+            self.assertEqual(r.call_args.kwargs["cwd"], str(self.home.root))
+        # 終わったが、新しい名前が返らない（/rename が命令として通らず、モデルに届いた、など）
+        with ran(json.dumps({"type": "result", "is_error": False, "result": "OK"}).encode("utf-8")):
+            self.assertEqual(REAL_RENAME("CLAUDE", cfg, w, "sess-1", "予定の確認", self.home.root), "unexpected")
+        with ran(code=2):
+            self.assertEqual(REAL_RENAME("CLAUDE", cfg, w, "sess-1", "予定の確認", self.home.root), "exit_2")
+        with mock.patch.object(run_claude.subprocess, "run", side_effect=subprocess.TimeoutExpired("c", 1)):
+            self.assertEqual(REAL_RENAME("CLAUDE", cfg, w, "sess-1", "予定の確認", self.home.root), "timeout")
+        with mock.patch.object(run_claude.subprocess, "run", side_effect=OSError("no exe")):
+            self.assertEqual(REAL_RENAME("CLAUDE", cfg, w, "sess-1", "予定の確認", self.home.root), "error")
+        self.assertEqual(REAL_RENAME("", cfg, w, "sess-1", "予定の確認", self.home.root), "claude_not_found")
+
+    def test_an_unsafe_name_or_id_is_never_passed(self):
+        cfg = self.cfg_with()
+        with mock.patch.object(run_claude.subprocess, "run") as r:
+            for name, sid in (('a" & calc & "', "sess-1"), ("%PATH%", "sess-1"), ("-x", "sess-1"), ("", "sess-1"),
+                              ("予定の確認", "-rf"), ("予定の確認", "a b")):
+                self.assertEqual(REAL_RENAME("CLAUDE", cfg, cfg.watchers[0], sid, name, self.home.root), "unsafe")
+            r.assert_not_called()
+
+
 class FakeView:
     """見ていたセッションを控えて、取り込んだあとに戻す係（desktop_view.DesktopView）の偽物。本物のデスクトップ版には触らない。"""
 
@@ -773,27 +854,64 @@ class DesktopImport(Base):
         cfg = self.keep_cfg()
         plain = run_claude.build_command("CLAUDE", cfg, cfg.watchers[0], self.home)
         self.assertNotIn("--name", plain)
-        named = run_claude.build_command("CLAUDE", cfg, cfg.watchers[0], self.home, session_name="alice「予定の件」#dev")
-        self.assertEqual(named[named.index("--name") + 1], "alice「予定の件」#dev")
+        named = run_claude.build_command("CLAUDE", cfg, cfg.watchers[0], self.home, session_name=TEMP)
+        self.assertEqual(named[named.index("--name") + 1], TEMP)
         self.assertNotIn("--no-session-persistence", named)  # 記録を残す設定なので、保存される
 
     def test_a_name_with_other_characters_is_not_passed_at_all(self):
-        # 名前には、誰でも書ける文字列が入る。決めた文字だけでなければ、引数に載せない（claude.cmd は cmd.exe を通る）
+        # 決めた文字だけの名前でなければ、引数に載せない（claude.cmd は cmd.exe を通る）
         cfg = self.keep_cfg()
         for bad in ('a" & calc & "', "%USERNAME%", "--bare", "a\nb"):
             cmd = run_claude.build_command("CLAUDE", cfg, cfg.watchers[0], self.home, session_name=bad)
             self.assertNotIn("--name", cmd)
             self.assertNotIn(bad, cmd)
 
-    def test_the_name_is_made_from_the_claimed_items(self):
-        f = self.claim()
-        self.assertEqual(run_claude.session_name_for([f]), "alice「SECRET-BODY please」#dev")
-        self.assertEqual(run_claude.session_name_for([f, self.claim("pending-b.json")]), "alice「SECRET-BODY please」#dev ほか1件")
-        broken = self.home.claims / "pending-x.json"
-        broken.write_text("{not json", encoding="utf-8")
-        self.assertEqual(run_claude.session_name_for([broken]), "メンション")  # 読めなくても、仕分けは止めない
-        with mock.patch.object(run_claude.session_naming, "build", side_effect=RuntimeError("boom")):
-            self.assertEqual(run_claude.session_name_for([f]), "メンション")
+    def test_the_session_is_renamed_to_the_name_claude_gave(self):
+        # 起動するときは仮の名前。返答を書いた Claude が中身を見て付けた名前に、投稿の前に付け直す（ADR-0043）
+        res = self.run_triage(self.keep_cfg(), lambda *a, **k: "ok")
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(self.renames, [("sess-fake", NAME)])
+        self.assertEqual(res["rename"], "ok")
+        self.assertEqual(self.posts, [("<@42>\n" + REPLY + "\n\nセッション: " + NAME, "42")])
+
+    def test_the_name_from_claude_is_cleaned_and_cut(self):
+        # 名前は、届いた本文に引きずられうる。決めた文字だけにして、全角 20 字ぶんに切る
+        os.environ["FAKE_CLAUDE_NAME"] = '予定の確認 " & calc & " %PATH% <@42> [link](https://x) ' + "あ" * 30
+        res = self.run_triage(self.keep_cfg(), lambda *a, **k: "ok")
+        self.assertTrue(res["ok"], res)
+        name = self.renames[0][1]
+        self.assertTrue(run_claude.session_naming.safe(name), name)
+        self.assertTrue(name.startswith("予定の確認 calc PATH 42 link https x"), name)
+        self.assertTrue(name.endswith("…"), name)
+        self.assertTrue(self.posts[0][0].endswith("セッション: " + name))
+
+    def test_without_a_name_or_a_rename_the_provisional_name_stays(self):
+        # 付け直せなかったときは、各件の行も仮の名前にする（デスクトップ版の一覧の名前と、そろえる）
+        cases = (("none", "ok", "no_name", 0), ("予定の確認", "exit_1", "exit_1", 1),
+                 ("予定の確認", "unexpected", "unexpected", 1))
+        for said, result, why, calls in cases:
+            with self.subTest(why):
+                self.posts.clear()
+                self.renames.clear()
+                os.environ["FAKE_CLAUDE_NAME"] = said
+                self.rename_result = result
+                res = self.run_triage(self.keep_cfg(), lambda *a, **k: "ok", name="pending-%s.json" % why)
+                self.assertTrue(res["ok"], res)  # 名前は見やすさのためのもの。仕分けは止めない
+                self.assertEqual((res["rename"], len(self.renames)), (why, calls))
+                self.assertTrue(self.posts[0][0].endswith("セッション: " + TEMP), self.posts)
+
+    def test_an_exception_while_renaming_does_not_fail_the_triage(self):
+        with mock.patch.object(run_claude, "rename_session", side_effect=RuntimeError("boom")):
+            res = self.run_triage(self.keep_cfg(), lambda *a, **k: "ok")
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(res["rename"], "error")
+        self.assertTrue(self.posts[0][0].endswith("セッション: " + TEMP))
+
+    def test_no_rename_unless_transcripts_are_kept(self):
+        res = self.run_triage(self.keep_cfg(keep_transcripts=False), lambda *a, **k: "ok")
+        self.assertTrue(res["ok"], res)
+        self.assertNotIn("rename", res)
+        self.assertEqual(self.renames, [])
 
     def launcher(self):
         """本物と同じ形で起動される偽の claude。Windows では、npm 版と同じ .cmd（引数が cmd.exe を通る）。"""
@@ -808,25 +926,32 @@ class DesktopImport(Base):
             path.chmod(0o755)
         return str(path), {"FAKE_PY": sys.executable, "FAKE_SCRIPT": str(fake)}
 
-    def test_triage_names_the_session_after_the_mention_and_keeps_it_out_of_the_run_record(self):
+    def test_triage_renames_the_session_through_the_launcher_and_keeps_the_name_out_of_the_run_record(self):
         claude, env = self.launcher()
-        out = Path(self._tmp.name) / "argv.json"
-        env["FAKE_CLAUDE_ARGV_OUT"] = str(out)
-        with mock.patch.dict(os.environ, env), mock.patch.object(run_claude.claude_bin, "find_claude", return_value=claude):
+        out, renamed = Path(self._tmp.name) / "argv.json", Path(self._tmp.name) / "rename.json"
+        env.update(FAKE_CLAUDE_ARGV_OUT=str(out), FAKE_CLAUDE_RENAME_OUT=str(renamed), FAKE_CLAUDE_NAME="SECRET-BODY の確認")
+        with mock.patch.dict(os.environ, env), mock.patch.object(run_claude.claude_bin, "find_claude", return_value=claude), \
+                mock.patch.object(run_claude, "rename_session", REAL_RENAME):
             cfg = self.keep_cfg(desktop_import=False)
             res = run_claude.triage(self.home, cfg.watchers[0], cfg, [self.claim("pending-n.json")], now=NOW, poster=self.poster)
             self.assertTrue(res["ok"], res)
             argv = json.loads(out.read_text(encoding="utf-8"))["argv"]
-            self.assertEqual(argv[argv.index("--name") + 1], "alice「SECRET-BODY please」#dev")
-            # 名前には本文の頭が入る。実行記録には、これまでどおり本文を書かない
+            self.assertEqual(argv[argv.index("--name") + 1], TEMP)  # 起動するときは、まだ中身を知らない
+            got = json.loads(renamed.read_text(encoding="utf-8"))
+            self.assertEqual(got["argv"][:4], ["-p", "/rename SECRET-BODY の確認", "--resume", "sess-fake"])
+            self.assertEqual(Path(got["cwd"]), self.home.root / "run")  # 仕分けと同じ作業フォルダで
+            self.assertEqual(res["rename"], "ok")
+            # 名前には件の中身が入る。実行記録には、これまでどおり本文も名前も書かない
             for rec in (self.home.root / "runs").glob("*.json"):
                 self.assertNotIn("SECRET-BODY", rec.read_text(encoding="utf-8"))
-            # 記録を残さない設定では、名前も付けない
+            # 記録を残さない設定では、名前を付けず、付け直さない
+            renamed.unlink()
             res = run_claude.triage(self.home, self.watcher, self.cfg, [self.claim("pending-m.json")], now=NOW, poster=self.poster)
             self.assertTrue(res["ok"], res)
             argv = json.loads(out.read_text(encoding="utf-8"))["argv"]
             self.assertNotIn("--name", argv)
             self.assertIn("--no-session-persistence", argv)
+            self.assertFalse(renamed.exists())
 
     def test_config_defaults_to_off_and_reads_the_switch(self):
         base = {"state_root": self.cfg.state_root.as_posix(), "watchers": [{"name": "me", "user_id": "1"}]}
@@ -1015,16 +1140,18 @@ class Continuation(Base):
 
     def test_a_reply_in_the_same_flow_is_added_to_the_previous_session(self):
         res, seen = self.run_once([self.claim_msg("a.json", 100)])
-        self.assertEqual(seen, [("alice「SECRET-BODY please」#dev", "", "")])  # 初めての場所は、新しいセッション
+        self.assertEqual(seen, [(TEMP, "", "")])  # 初めての場所は、新しいセッション
         self.assertEqual(self.table()["20"]["message_ids"], ["100"])
-        self.assertEqual(self.table()["20"]["name"], "alice「SECRET-BODY please」#dev")
+        self.assertEqual(self.table()["20"]["name"], NAME)
         self.transcript()
         res, seen = self.run_once([self.claim_msg("b.json", 200, before=[90, 100])])
         self.assertTrue(res["ok"], res)
         self.assertEqual(seen, [("", "", "sess-fake")])  # 名前は付け直さない
+        self.assertEqual(self.renames, [("sess-fake", NAME)])  # 付け直したのは、初めの回だけ
+        self.assertNotIn("rename", res)
         self.assertEqual((res["continued_from"], res["continue_mode"]), ("sess-fake", "append"))
         self.assertEqual(self.table()["20"]["message_ids"], ["100", "200"])  # 続けた回は、前に仕分けた ID も引き継ぐ
-        self.assertEqual(self.table()["20"]["name"], "alice「SECRET-BODY please」#dev")  # 名前も引き継ぐ
+        self.assertEqual(self.table()["20"]["name"], NAME)  # 名前も引き継ぐ
         rec = next((self.home.root / "runs").glob("*-%s.json" % res["run_id"])).read_text(encoding="utf-8")
         self.assertIn('"continued_from": "sess-fake"', rec)
         self.assertNotIn("SECRET-BODY", rec)
@@ -1039,12 +1166,13 @@ class Continuation(Base):
         self.hold()
         res, seen = self.run_once([self.claim_msg("b.json", 200, before=[100])])
         self.assertTrue(res["ok"], res)
-        self.assertEqual(seen, [("alice「SECRET-BODY please」#dev（続き）", "sess-fake", "")])
+        self.assertEqual(seen, [(TEMP + "（続き）", "sess-fake", "")])
         self.assertEqual(res["continue_mode"], "fork")
         self.assertEqual(res["fork_reason"], "held")
         # 時刻の無い印は、どこから動いているかだけ。取り込まない設定では、裏の処理を終わらせない（ADR-0039）
         self.assertEqual(res["held_by"], {"entrypoint": "claude-desktop", "release": "no_desktop"})
-        self.assertEqual(self.table()["20"]["name"], "alice「SECRET-BODY please」#dev（続き）")  # 次は、写した方に書き足す
+        self.assertEqual(self.table()["20"]["name"], NAME + "（続き）")  # 次は、写した方に書き足す
+        self.assertEqual(self.renames[-1], ("sess-fake", NAME + "（続き）"))
 
     def test_a_previous_entry_without_a_name_is_copied(self):
         # 名前を控える前の形。名前の 1 通を送れないので、写して、新しい名前で控え直す
@@ -1052,9 +1180,9 @@ class Continuation(Base):
             json.dumps({"20": {"session_id": "sess-fake", "message_ids": ["100"], "at": int(time.time())}}), encoding="utf-8")
         self.transcript()
         res, seen = self.run_once([self.claim_msg("b.json", 200, before=[100])])
-        self.assertEqual(seen, [("alice「SECRET-BODY please」#dev（続き）", "sess-fake", "")])
+        self.assertEqual(seen, [(TEMP + "（続き）", "sess-fake", "")])
         self.assertEqual(res["fork_reason"], "no_name")
-        self.assertEqual(self.table()["20"]["name"], "alice「SECRET-BODY please」#dev（続き）")
+        self.assertEqual(self.table()["20"]["name"], NAME + "（続き）")
 
     def test_an_idle_desktop_process_is_ended_and_the_flow_is_added_to(self):
         # デスクトップ版の待機中の裏の処理が開いていて、画面に出ていなければ、終わらせてから書き足す（ADR-0039）
@@ -1091,7 +1219,7 @@ class Continuation(Base):
                                      ("still_held", "local_viewed", "still_held")):
             with self.subTest(case):
                 self.home.root.joinpath("sessions.json").write_text(json.dumps({"20": {
-                    "session_id": "sess-fake", "name": "alice「SECRET-BODY please」#dev", "message_ids": ["100"],
+                    "session_id": "sess-fake", "name": NAME, "message_ids": ["100"],
                     "at": int(time.time())}}), encoding="utf-8")
                 self.transcript()
                 self.hold(status="idle")
@@ -1103,7 +1231,7 @@ class Continuation(Base):
                 self.assertTrue(res["ok"], res)
                 self.assertEqual((res["continue_mode"], res["fork_reason"]), ("fork", "held"))
                 self.assertEqual(res["held_by"]["release"], case)
-                self.assertEqual(seen, [("alice「SECRET-BODY please」#dev（続き）", "sess-fake", "")])
+                self.assertEqual(seen, [(TEMP + "（続き）", "sess-fake", "")])
                 self.assertEqual(len(calls), 0 if case == "on_screen" else 1)  # 本人が見ているセッションは、終わらせようとしない
 
     def release_env(self, **extra):
@@ -1228,7 +1356,7 @@ class Continuation(Base):
         for state, mode in (("archived", "fork"), ("missing", "fork"), ("unknown", "fork"), ("listed", "append")):
             with self.subTest(state):
                 self.home.root.joinpath("sessions.json").write_text(json.dumps({"20": {
-                    "session_id": "sess-fake", "name": "alice「SECRET-BODY please」#dev", "message_ids": ["100"],
+                    "session_id": "sess-fake", "name": NAME, "message_ids": ["100"],
                     "at": int(time.time())}}), encoding="utf-8")
                 imports.clear()
                 self.posts.clear()

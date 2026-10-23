@@ -57,13 +57,10 @@ class BuildItem(unittest.TestCase):
         self.assertEqual(item["mention"]["text"], "hi @taro")
         self.assertEqual(item["mention"]["attachments"], ["a.png"])
 
-    def test_names_put_into_the_text_are_listed(self):
-        # 表示名には空白が入りうる。あとから「@名前」を取り除けるよう、置き換えた名前を残す（セッションの名前に使う）
+    def test_mentions_in_the_text_become_names(self):
         item = self.build(message=snap(1000, "<@111> <@&900> <@111> <@999> hi"),
                           user_names={111: "taro / たろう"}, role_names={900: "Nebula"})
         self.assertEqual(item["mention"]["text"], "@taro / たろう @Nebula @taro / たろう @999 hi")
-        self.assertEqual(item["mention_names"], ["taro / たろう", "999", "Nebula"])
-        self.assertEqual(self.build(message=snap(1000, "hi"))["mention_names"], [])
 
     def test_ids_are_strings(self):
         item = self.build()

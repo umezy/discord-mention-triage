@@ -18,6 +18,7 @@ Discord のメンションを読み取り専用で仕分けし、返信ドラフ
 4. **仕分けの Claude（`claude -p`）の権限を広げない。** `pipeline/run_claude.py` の `build_command` は、道具を
    Read / Grep / Glob / Edit / Write に限り、許可する書き込みを `drafts/` に限っている（投稿本文は、最後の返答で受け取る。ADR-0037）。モードは `dontAsk` で、`desktop_import: true` のときだけ `auto`（ADR-0033）。Bash・ネットワーク・MCP・スキルを足す、
    `--bare` を付ける、Webhook URL や API キー系の環境変数を渡す、といった変更はしない（`tests/test_run_claude.py` が検査）。
+   仕分けのあとでセッションの名前を付け直す `rename_command`（`/rename`。ADR-0043）は、道具も設定も渡さない。ここにも足さない。
 5. **秘密と本文をリポジトリに入れない。** トークン・Webhook URL・`inbox/` `drafts/` 等は `~/.discord-mention-triage/`。
    `config.py` はリポジトリ内を指す `state_root` を拒否する。この検査を外さない。
 6. **ユーザートークン（ブラウザから抜いたトークン）で Discord を読むコードを入れない。** Discord の規約で禁じられている（ADR-0020）。

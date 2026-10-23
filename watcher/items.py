@@ -49,14 +49,6 @@ def render_text(text: str, user_names: dict, role_names: dict) -> str:
     return ROLE_MENTION_RE.sub(lambda m: "@" + role_names.get(int(m.group(1)), m.group(1)), text)
 
 
-def mention_names(text: str, user_names: dict, role_names: dict) -> list:
-    """render_text が本文の中で置き換えた名前（出てきた順、重複なし）。表示名には空白が入りうるので、
-    あとから「@名前」の切れ目を当てることはできない。セッションの名前を作るときに、これで取り除く（pipeline/session_naming.py）。"""
-    names = [user_names.get(int(i), i) for i in USER_MENTION_RE.findall(text or "")]
-    names += [role_names.get(int(i), i) for i in ROLE_MENTION_RE.findall(text or "")]
-    return list(dict.fromkeys(names))
-
-
 def slim(s: Snap, user_names: dict, role_names: dict) -> dict:
     return {
         "author": s.author_name,
@@ -105,7 +97,6 @@ def build_item(
         "pull_requests": pull_requests,
         "pull_requests_blocked": pull_requests_blocked,
         "mention": slim(message, user_names, role_names),
-        "mention_names": mention_names(message.content, user_names, role_names),
         "context_before": [context(s, user_names, role_names) for s in before],
         "context_after": [context(s, user_names, role_names) for s in after],
     }

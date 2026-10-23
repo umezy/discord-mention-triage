@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-23
+amended-by: [ADR-0043]
 ---
 
 # ADR-0041: 1 回の仕分けで扱うメンションは 1 件にし、別々のメンションを同じセッションにしない
@@ -38,6 +39,8 @@ date: 2026-10-23
 
 ## 補足
 
+- 一部を変えた ADR:
+  - [ADR-0043](0043-name-sessions-from-the-reply.md): セッションの名前は、その件から機械的に作るのではなく、その件の返答を書いた仕分けの Claude が付ける
 - この ADR が一部を変えた ADR:
   - [ADR-0014](0014-poll-search-api-single-entry.md): Claude が動いている間の新着は、終わったあとの回が「まとめて」ではなく、1 件ずつ仕分ける（検索で拾うのは、これまでどおりまとめて）
 - 関連: [しくみ](../how-it-works.md)、`pipeline/dispatch.py`、`pipeline/continuation.py`

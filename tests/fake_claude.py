@@ -1,9 +1,9 @@
 """テスト用の偽 claude。標準入力の指示文から控えの書き出し先を読み取り、ふりをして控えを書き、投稿本文を最後の返答で返す。
 
 FAKE_CLAUDE_MODE:
-  ok        控えを書いて、投稿本文と COUNTS 行を最後の返答にした JSON を返す（既定）
+  ok        控えを書いて、投稿本文と NAME 行と COUNTS 行を最後の返答にした JSON を返す（既定）
   fail      何も書かず、終了コード 1
-  nodigest  控えは書くが、最後の返答は COUNTS 行だけ（投稿本文が無い）
+  nodigest  控えは書くが、最後の返答は NAME 行と COUNTS 行だけ（投稿本文が無い）
   hang      60秒眠る（タイムアウトの検査用）
   iserror   控えと返答は作るが is_error: true を返す
   autherr   認証切れのエラーを返して終了コード 1
@@ -13,6 +13,8 @@ FAKE_CLAUDE_MODE:
 FAKE_CLAUDE_ARGV_OUT があれば、受け取った引数・作業フォルダ・標準入力を JSON で書き出す。
 FAKE_CLAUDE_COUNTS があれば、COUNTS 行の中身をそれにする（例: "draft=0 stamp=0 skip=2 pr=0"。"none" なら COUNTS 行を出さない）。
 FAKE_CLAUDE_DIGEST があれば、返答の投稿本文をそれにする。
+FAKE_CLAUDE_NAME があれば、返答の NAME 行（セッションの名前）をそれにする（既定は「予定の確認」。"none" なら NAME 行を出さない）。
+`-p "/rename <名前>"` で呼ばれたら、名前を付け直したことにして返す（FAKE_CLAUDE_RENAME_OUT があれば、受け取った引数を書き出す）。
 """
 
 import json
@@ -22,6 +24,15 @@ import sys
 import time
 
 mode = os.environ.get("FAKE_CLAUDE_MODE", "ok")
+
+if sys.argv[1:2] == ["-p"] and sys.argv[2].startswith("/rename "):
+    if os.environ.get("FAKE_CLAUDE_RENAME_OUT"):
+        with open(os.environ["FAKE_CLAUDE_RENAME_OUT"], "w", encoding="utf-8") as f:
+            json.dump({"argv": sys.argv[1:], "cwd": os.getcwd()}, f, ensure_ascii=False)
+    print(json.dumps({"type": "result", "is_error": False, "result": "Session renamed to: " + sys.argv[2][len("/rename "):],
+                      "session_id": sys.argv[sys.argv.index("--resume") + 1], "total_cost_usd": 0}))
+    sys.exit(0)
+
 prompt = sys.stdin.buffer.read().decode("utf-8")
 
 out_path = os.environ.get("FAKE_CLAUDE_ARGV_OUT")
@@ -67,6 +78,9 @@ if drafts:
     with open(drafts.group(1), "w", encoding="utf-8") as f:
         f.write("# drafts (fake)\n")
 reply = [] if mode == "nodigest" else [os.environ.get("FAKE_CLAUDE_DIGEST") or "**返信ドラフト**\nalice（fake）\n```\n確認します\n```"]
+name = os.environ.get("FAKE_CLAUDE_NAME") or "予定の確認"
+if name != "none":
+    reply.append("NAME " + name)
 if counts != "none":
     reply.append("COUNTS " + counts)
 
