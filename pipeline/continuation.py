@@ -13,6 +13,7 @@
     10-22 に確かめた）。開いているのが、デスクトップ版の待機中の裏の処理だけなら、それを終わらせてから書き足す（release。ADR-0039）。
     デスクトップ版は、次に話すときに処理を起動し直し、書き足した分まで読み直す（2026-10-22 に確かめた）。
   * 終わらせられなければ、`claude -p --resume <前の ID> --fork-session` で、前の会話を写した新しいセッションを作る。
+  * 続きと見なしても、前のセッションが 24 時間より前に使われたものか、前の件と別の話なら、続けない（same_topic.py。ADR-0044）。
 
 セッション ID は、claude のコマンドライン引数になる（claude.cmd のときは、cmd.exe を通る）。決めた文字だけの ID しか使わない。
 """
@@ -57,6 +58,20 @@ def transcript_exists(session_id: str, env=None) -> bool:
     if not valid_id(session_id):
         return False
     return any((config_dir(env) / "projects").glob("*/%s.jsonl" % session_id))
+
+
+def last_used(session_id: str, env=None) -> float | None:
+    """そのセッションが最後に使われた時刻（記録の最終更新。仕分けで書き足した分も、本人がデスクトップ版で話した分も入る）。
+    記録が無ければ None。"""
+    if not valid_id(session_id):
+        return None
+    times = []
+    for path in (config_dir(env) / "projects").glob("*/%s.jsonl" % session_id):
+        try:
+            times.append(path.stat().st_mtime)
+        except OSError:
+            continue
+    return max(times, default=None)
 
 
 def pid_alive(pid: int) -> bool:
@@ -233,6 +248,12 @@ def name_of(table: dict, items) -> str:
     """続ける前のセッションの名前（書き足すとき、各件のセッションの行に使う）。古い形の控えには無い（""）。"""
     entry = table.get(next(iter(places(items)), ""))
     return str(entry.get("name") or "") if isinstance(entry, dict) else ""
+
+
+def known_of(table: dict, items) -> list:
+    """続ける前のセッションで、仕分けたメッセージの ID（同じ話かを聞くとき、前の会話から前の件を拾うのに使う）。"""
+    entry = table.get(next(iter(places(items)), ""))
+    return [str(m) for m in entry.get("message_ids") or []] if isinstance(entry, dict) else []
 
 
 def environment_of(table: dict, items):

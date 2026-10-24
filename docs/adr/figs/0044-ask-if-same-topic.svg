@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="330" viewBox="0 0 680 330" role="img" font-family="'Segoe UI','Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif">
+  <title>同じ場所の続きでも、同じ話かを聞く</title>
+  <desc>これまでは、同じスレッドで前の件のあとに届いた件は、前の会話に前の件があれば、送り主も中身も見ずに続きと見なし、セッション A に書き足したので、別の話が混ざった。これからは、続きに見える件でも、前のセッションが 24 時間以内に使われていれば haiku に同じ話かを聞き、same ならセッション A に書き足し、new なら新しいセッション B にする。24 時間より前なら、聞かずにセッション B にする。答えが読めないときは、これまでどおり書き足す。</desc>
+  <defs><marker id="a-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker><marker id="a-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <rect width="680" height="330" fill="#FFFFFF"/>
+  <text x="15" y="24" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">これまで</text>
+  <rect x="15" y="40" width="200" height="60" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="115.0" y="61.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">同じスレッドに 2 件</text>
+  <text x="115.0" y="82.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">不具合の件と、別の人の別の用件</text>
+  <rect x="245" y="40" width="200" height="60" rx="8" fill="#FAECE7" stroke="#D85A30" stroke-width="0.5"/>
+  <text x="345.0" y="61.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">前の会話に前の件</text>
+  <text x="345.0" y="82.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">送り主も中身も見ずに、続き</text>
+  <rect x="475" y="40" width="200" height="60" rx="8" fill="#FAECE7" stroke="#D85A30" stroke-width="0.5"/>
+  <text x="575.0" y="61.5" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">セッション A に 2 件</text>
+  <text x="575.0" y="82.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">別の話が混ざる</text>
+  <path d="M215 70 L243 70" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <path d="M445 70 L473 70" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <text x="15" y="144" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="start" dominant-baseline="central">これから</text>
+  <rect x="15" y="160" width="200" height="110" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="115.0" y="204.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">続きに見える件</text>
+  <text x="115.0" y="226.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">前の会話に前の件がある</text>
+  <rect x="245" y="160" width="200" height="50" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="345.0" y="177.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">haiku に同じ話かを聞く</text>
+  <text x="345.0" y="196.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">24 時間以内に使ったセッション</text>
+  <rect x="245" y="220" width="200" height="50" rx="8" fill="#F7F6F2" stroke="#B4B2A9" stroke-width="0.5"/>
+  <text x="345.0" y="237.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">24 時間より前</text>
+  <text x="345.0" y="256.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">聞かない</text>
+  <rect x="475" y="160" width="200" height="50" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="575.0" y="177.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">セッション A に書き足す</text>
+  <text x="575.0" y="196.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">same: 別の人でも、同じ話なら</text>
+  <rect x="475" y="220" width="200" height="50" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text x="575.0" y="237.0" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle" dominant-baseline="central">新しいセッション B</text>
+  <text x="575.0" y="256.0" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">new: 同じ人でも、別の用件なら</text>
+  <path d="M215 185 L243 185" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <path d="M215 245 L243 245" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <path d="M445 180 L473 180" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <path d="M445 198 L473 232" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#a-teal)"/>
+  <path d="M445 250 L473 250" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a-gray)"/>
+  <text x="340.0" y="298" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">聞く回は、道具なし・記録なしで 1 回（数秒）。答えが読めないときは、これまでどおり書き足す</text>
+  <text x="340.0" y="318" font-size="12" font-weight="400" fill="#5F5E5A" text-anchor="middle" dominant-baseline="central">新しいセッションにしたら、その場所の次の続きは、セッション B の方を見る</text>
+</svg>

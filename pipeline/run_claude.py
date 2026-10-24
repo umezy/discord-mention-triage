@@ -14,6 +14,8 @@
 同じ流れの続きの件は、前のセッションに書き足して仕分ける（--resume <前の ID>。ADR-0038）。前のセッションを、デスクトップ版の
 待機中の裏の処理が開いていて、画面には出ていなければ、その処理を終わらせてから書き足す（ADR-0039）。それ以外で、いま動いている
 Claude Code が開いているときなどは、前の会話を写した新しいセッションで仕分ける（--fork-session。ADR-0036。continuation.py）。
+続きに見えても、前のセッションが 24 時間より前に使われたものか、小さいモデルに聞いて前の件と別の話なら、新しいセッションで仕分ける
+（same_topic.py。ADR-0044）。
 
 pick_environment の設定のときは、仕分けの前に、件に合う環境（デスクトップ版の「環境を選択」に並ぶ、フォルダの組）を選ばせ、
 その環境の作業フォルダで動かす（environments.py。ADR-0042）。合う環境が無ければ、関連するフォルダから選ばせる。
@@ -56,6 +58,7 @@ import continuation  # noqa: E402
 import desktop_view  # noqa: E402
 import environments  # noqa: E402
 import notify  # noqa: E402
+import same_topic  # noqa: E402
 import session_naming  # noqa: E402
 import tick  # noqa: E402
 from watcher import config as wconfig  # noqa: E402
@@ -614,6 +617,23 @@ def choose_environment(home, watcher, cfg, items, summary, env, environments_fn=
     return chosen
 
 
+def ask_same_topic(cfg, home, name, items, known, env):
+    """前の件と同じ話かを、小さいモデルに聞く（same_topic.ask）。テストでは、本物の claude を呼ばない偽物に差し替える。"""
+    return same_topic.ask(claude_bin.find_claude(cfg.claude_bin), name, items, known, home.root / "run", env=env)
+
+
+def same_topic_of(cfg, home, table, items, session_id: str, now: datetime, env) -> tuple:
+    """続きの候補が、前に仕分けた件と同じ話か（ADR-0044）。(same / new / stale / error, 聞いた回の費用) を返す。
+    前のセッションが、最後に使われてから 24 時間より前なら、聞かずに stale。聞けなければ error（呼んだ側は、これまでどおり続ける）。"""
+    used = continuation.last_used(session_id)
+    if used is not None and now.timestamp() - used > same_topic.RECENT_SEC:
+        return "stale", None
+    try:
+        return ask_same_topic(cfg, home, continuation.name_of(table, items), items, continuation.known_of(table, items), env)
+    except Exception:  # noqa: BLE001 - 聞けなくても、仕分けは止めない
+        return "error", None
+
+
 def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = None, poster=notify.post,
            import_fn=import_to_desktop, view=None, environments_fn=None, picker=None, rename_fn=None) -> dict:
     """仕分けを1回実行する。例外は投げず、結果の辞書を返す（ok / reason / counts / ...）。
@@ -658,6 +678,15 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
         continued = continuation.pick(table, items) if cfg.keep_transcripts else ""
         mode = ""
         environment = None
+        env = child_env(home)
+        if continued:
+            # 前の件と同じ話のときだけ続ける。24 時間より前に使われたセッションには、聞かずに続けない（ADR-0044）
+            topic, cost = same_topic_of(cfg, home, table, items, continued, now, env)
+            summary.update(topic=topic, topic_of=continued)
+            if cost is not None:
+                summary["topic_cost"] = cost
+            if topic in ("new", "stale"):
+                continued = ""
         if continued:
             # 続きは、選び直さず、前のセッションの環境で動かす（ADR-0042）。その環境がもう使えなければ run で動かす
             environment = environments.from_json(continuation.environment_of(table, items), cfg.state_root)
@@ -682,7 +711,6 @@ def triage(home, watcher, cfg, files, *, command=None, now: datetime | None = No
             claude = claude_bin.find_claude(cfg.claude_bin)
             if not claude:
                 return finish_failure(home, files, summary, "claude_not_found", poster, started)
-        env = child_env(home)
         if not continued and watcher.pick_environment:
             # 仕分けの前に、件に合う環境を選ばせる。作業フォルダは起動の前に決める必要がある（ADR-0042）
             environment = choose_environment(home, watcher, cfg, items, summary, env, environments_fn, picker)

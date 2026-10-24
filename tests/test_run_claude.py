@@ -60,6 +60,13 @@ class Base(unittest.TestCase):
                                     self.renames.append((sid, name)) or self.rename_result)
         patcher.start()
         self.addCleanup(patcher.stop)
+        # 同じ話かを聞くのも、本物の claude を呼ばない。聞かれた名前と前の件の ID を控え、same と答えたことにする（ADR-0044）
+        self.topics, self.topic_answer = [], ("same", None)
+        patcher = mock.patch.object(run_claude, "ask_same_topic",
+                                    side_effect=lambda cfg, home, name, items, known, env:
+                                    self.topics.append((name, list(known))) or self.topic_answer)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def tearDown(self):
         os.environ.pop("FAKE_CLAUDE_MODE", None)
@@ -1099,7 +1106,9 @@ class Continuation(Base):
     def transcript(self, session_id="sess-fake"):
         folder = self.claude_dir / "projects" / "C--state-me-run"
         folder.mkdir(parents=True, exist_ok=True)
-        (folder / ("%s.jsonl" % session_id)).write_text("{}\n", encoding="utf-8")
+        path = folder / ("%s.jsonl" % session_id)
+        path.write_text("{}\n", encoding="utf-8")
+        return path
 
     def claim_msg(self, name, message_id, channel_id="20", before=()):
         it = dict(item(), message_id=str(message_id), channel_id=str(channel_id),
@@ -1150,6 +1159,8 @@ class Continuation(Base):
         self.assertEqual(self.renames, [("sess-fake", NAME)])  # 付け直したのは、初めの回だけ
         self.assertNotIn("rename", res)
         self.assertEqual((res["continued_from"], res["continue_mode"]), ("sess-fake", "append"))
+        self.assertEqual(self.topics, [(NAME, ["100"])])  # 続ける前に、前のセッションの名前と前の件で、同じ話かを聞いた
+        self.assertEqual(res["topic"], "same")
         self.assertEqual(self.table()["20"]["message_ids"], ["100", "200"])  # 続けた回は、前に仕分けた ID も引き継ぐ
         self.assertEqual(self.table()["20"]["name"], NAME)  # 名前も引き継ぐ
         rec = next((self.home.root / "runs").glob("*-%s.json" % res["run_id"])).read_text(encoding="utf-8")
@@ -1158,6 +1169,54 @@ class Continuation(Base):
         self.assertNotIn("fork_reason", res)  # 書き足した回には、写した理由は無い
         # この回のトークン数（usage）。cost は、続けた回では前の回までの累計なので、1 回ぶんの重さはこちらで見る
         self.assertEqual(json.loads(rec)["tokens"], {"in": 2, "cache_write": 9045, "cache_read": 9918, "out": 5})
+
+    def test_a_different_topic_in_the_same_place_gets_a_new_session(self):
+        # 同じスレッドでも、前の件と別の話なら、前のセッションに入れない（ADR-0044）
+        self.run_once([self.claim_msg("a.json", 100)])
+        self.transcript()
+        self.hold(status="idle")  # 開いている処理があっても、続けないので、終わらせない
+        self.topic_answer = ("new", 0.002)
+        with mock.patch.object(run_claude.continuation, "release") as release:
+            res, seen = self.run_once([self.claim_msg("b.json", 200, before=[100])])
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(seen, [(TEMP, "", "")])  # 写さず、名前にも「（続き）」を付けない
+        self.assertEqual((res["topic"], res["topic_of"], res["topic_cost"]), ("new", "sess-fake", 0.002))
+        self.assertNotIn("continued_from", res)
+        self.assertNotIn("continue_mode", res)
+        release.assert_not_called()
+        self.assertEqual(self.table()["20"]["message_ids"], ["200"])  # 次の続きは、新しいセッションの方を見る
+
+    def test_a_session_unused_for_a_day_is_not_continued_or_asked(self):
+        self.run_once([self.claim_msg("a.json", 100)])
+        old = NOW.timestamp() - 25 * 3600
+        os.utime(self.transcript(), (old, old))
+        self.topics.clear()
+        res, seen = self.run_once([self.claim_msg("b.json", 200, before=[100])])
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(seen, [(TEMP, "", "")])
+        self.assertEqual(res["topic"], "stale")
+        self.assertEqual(self.topics, [])  # 古いセッションには、聞かない
+        self.assertNotIn("topic_cost", res)
+
+    def test_a_topic_check_that_fails_keeps_the_flow(self):
+        self.run_once([self.claim_msg("a.json", 100)])
+        recent = NOW.timestamp() - 23 * 3600
+        os.utime(self.transcript(), (recent, recent))
+        self.topic_answer = ("error", None)
+        res, seen = self.run_once([self.claim_msg("b.json", 200, before=[100])])
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(seen, [("", "", "sess-fake")])  # 聞けなければ、これまでどおり書き足す
+        self.assertEqual((res["topic"], res["continue_mode"]), ("error", "append"))
+
+    def test_last_used_is_the_newest_transcript_time(self):
+        self.assertIsNone(continuation.last_used("sess-fake"))
+        path = self.transcript()
+        os.utime(path, (1_000_000_000, 1_000_000_000))
+        self.assertEqual(continuation.last_used("sess-fake"), 1_000_000_000)
+        self.assertIsNone(continuation.last_used("-bad"))
+        table = {"20": {"session_id": "s", "message_ids": ["1", 2]}}
+        self.assertEqual(continuation.known_of(table, [{"channel_id": "20"}]), ["1", "2"])
+        self.assertEqual(continuation.known_of(table, [{"channel_id": "21"}]), [])
 
     def test_a_session_open_in_a_running_claude_is_copied_instead(self):
         # デスクトップ版で話しかけたあと、裏の処理が動いている間に書き足すと、記録が枝分かれする（ADR-0038）
