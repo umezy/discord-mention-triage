@@ -14,7 +14,7 @@
 同じ流れの続きの件は、前のセッションに書き足して仕分ける（--resume <前の ID>。ADR-0038）。前のセッションを、デスクトップ版の
 待機中の裏の処理が開いていて、画面には出ていなければ、その処理を終わらせてから書き足す（ADR-0039）。それ以外で、いま動いている
 Claude Code が開いているときなどは、前の会話を写した新しいセッションで仕分ける（--fork-session。ADR-0036。continuation.py）。
-続きに見えても、前のセッションが 24 時間より前に使われたものか、Sonnet に聞いて前の件と別の話なら、新しいセッションで仕分ける
+続きに見えても、前のセッションが 24 時間より前に使われたものか、Opus に聞いて前の件と別の話なら、新しいセッションで仕分ける
 （same_topic.py。ADR-0044）。
 
 pick_environment の設定のときは、仕分けの前に、件に合う環境（デスクトップ版の「環境を選択」に並ぶ、フォルダの組）を選ばせ、
@@ -618,7 +618,7 @@ def choose_environment(home, watcher, cfg, items, summary, env, environments_fn=
 
 
 def ask_same_topic(cfg, home, name, items, known, env):
-    """前の件と同じ話かを、Sonnet に聞く（same_topic.ask）。テストでは、本物の claude を呼ばない偽物に差し替える。"""
+    """前の件と同じ話かを、Opus に聞く（same_topic.ask）。テストでは、本物の claude を呼ばない偽物に差し替える。"""
     return same_topic.ask(claude_bin.find_claude(cfg.claude_bin), name, items, known, home.root / "run", env=env)
 
 
