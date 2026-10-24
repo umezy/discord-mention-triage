@@ -20,7 +20,7 @@ def item(before=(), text="来週の打ち合わせの資料、見てもらえま
 class Command(unittest.TestCase):
     def test_no_tools_no_settings_no_transcript(self):
         cmd = same_topic.command("claude")
-        self.assertEqual(cmd[cmd.index("--model") + 1], "haiku")
+        self.assertEqual(cmd[cmd.index("--model") + 1], "sonnet")
         self.assertEqual(cmd[cmd.index("--tools") + 1], "")
         self.assertEqual(cmd[cmd.index("--setting-sources") + 1], "")
         self.assertEqual(cmd[cmd.index("--permission-mode") + 1], "dontAsk")
